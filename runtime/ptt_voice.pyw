@@ -685,7 +685,10 @@ def pump_messages() -> bool:
         got, msg = win32gui.PeekMessage(0, 0, 0, win32con.PM_REMOVE)
         if not got:
             return True
-        hwnd, message, wparam, _ = msg
+        # pywin32 的 PeekMessage 返回 6 元组 (hwnd, message, wparam, lparam, time, pt)，
+        # 早期按 4 个解包 → 一收到消息就 ValueError 崩掉整个守护（Ctrl+Alt+W/Q 全失效）。
+        # 用下标取值，不依赖元组长度，兼容不同 pywin32 版本。
+        message, wparam = msg[1], msg[2]
         if message == win32con.WM_HOTKEY:
             now = time.monotonic()
             if now - _last_oneshot >= 1.5:
