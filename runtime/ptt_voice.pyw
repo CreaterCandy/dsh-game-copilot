@@ -141,7 +141,7 @@ ASR = CFG["asr"]
 FB = CFG.get("feedback", {})
 SAMPLE_RATE = int(REC.get("sample_rate", 16000))
 
-# ---- DSH 插件配置（设置页「桌宠参谋」改的那份）----
+# ---- DSH 插件配置（设置页「DSH游戏助理」改的那份）----
 # 为什么要读它：语音播报/音色/语速/音量/记忆模式这些开关现在统一在 DSH 设置页里改，
 # 落盘到 %DSH_HOME%\dsh-game-copilot.json。读取实现放在 memory_store（按 mtime 缓存），
 # 这里只做薄封装——好处是**改完下一句话就生效**，不用像以前那样重启播报进程。

@@ -219,7 +219,7 @@ window.__ModuleLoader__.load({
           // 失败原因单独一行、小字（原文照说，不加"没看成"这种前缀；画面描述不进气泡）
           bubble?.error ? h('div', { className: `${NS}-err` }, bubble.error) : null,
         ),
-        // 徽章只说游戏名；没在玩就整块不显示（不写"桌宠参谋：待机"这类招牌字）
+        // 徽章只说游戏名；没在玩就整块不显示（不写"游戏助理：待机"这类招牌字）
         playing ? h('div', { className: `${NS}-chip` }, frame?.game || frame?.process || '') : null,
         h(PetSprite, { animation }),
       );
@@ -279,12 +279,12 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * 设置页「桌宠参谋」：所有可视化配置 + 自检。
+     * 设置页「DSH游戏助理」：所有可视化配置 + 自检。
      * 数据流：GET /config 拿生效值 → 改动就地 POST /config（宿主立即生效并落盘）→
      * 回读宿主归一化后的值，保证界面显示的永远是"真正在跑的那份"。
      */
     /**
-     * 桌宠参谋设置页。
+     * DSH游戏助理设置页。
      * 直接 iframe 载入网页端 /settings —— 与浏览器版共用同一份 HTML/CSS/JS，
      * 排版 100% 一致、字段永不落后。相对路径会继承 DSH 的 origin+端口，
      * 页面内的 API 逻辑用 location.port 自动拼地址，无需额外配置。
@@ -320,7 +320,7 @@ window.__ModuleLoader__.load({
         h('iframe', {
           ref: frameRef,
           src: `${ROUTE}/settings?embed=1`,
-          title: '桌宠参谋设置',
+          title: 'DSH游戏助理 · 设置',
           className: `${NS}-frame`,
           style: { width: '100%', minHeight: '420px', border: '0', display: 'block', background: 'transparent' },
           onLoad: fitHeight,
@@ -341,7 +341,7 @@ window.__ModuleLoader__.load({
         // });
         ctx.slots.inject('settings.section', function* () {
           yield ctx.slots.register(
-            { name: 'settings.section', id: 'game-pet-config', order: 31, label: () => '桌宠参谋' },
+            { name: 'settings.section', id: 'game-pet-config', order: 31, label: () => 'DSH游戏助理' },
             SettingsSection,
           );
         });

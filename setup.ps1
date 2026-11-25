@@ -87,7 +87,7 @@ if (Test-Path $legacyProfile) {
 
 Write-Step '完成'
 Write-Host '下一步：' -ForegroundColor Green
-Write-Host '  1) 启动 DSH，在设置页打开「桌宠参谋 → 模型与能力」，填一个 OpenAI 兼容端点'
+Write-Host '  1) 启动 DSH，在设置页打开「DSH游戏助理 → 模型与能力」，填一个 OpenAI 兼容端点'
 Write-Host '  2) 点「测一下」，让插件判断这个端点能不能看图'
 Write-Host '  3) 点顶部「启动游戏助理」，之后按住 Caps Lock 说话即可'
 Write-Host '  设置页也可以直接浏览器打开：http://127.0.0.1:<DSH端口>/dsh-game-copilot-7341/settings'
