@@ -200,6 +200,25 @@ function createWindow() {
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces?.(true, { visibleOnFullScreen: true });
   win.setIgnoreMouseEvents(true, { forward: true });
+  /**
+   * 强制 1:1 缩放。
+   *
+   * ⚠️ 2026-11-25 实测踩到：Chromium 会把**每个 host 的缩放级别**持久化到 userData 的
+   * Preferences（`partition.per_host_zoom_levels`），这里的 host 就是 `127.0.0.1`。
+   * 一旦那里被写成 2 倍（实测是 zoom level 3.8），此后每次新建窗口都带着它：
+   * 窗口外框还是 344×363，但 CSS 视口只剩 172×181，宠物、气泡、命中区全被压到左上角
+   * 一小块——看起来像"小窗变小了/点不准"，实际是页面被放大了两倍还裁在窗口里。
+   * 建窗时掰回 1 既保证一致，也顺手把那个脏值洗掉。
+   *
+   * 注意必须在 did-finish-load 之后再设一次：早于导航调用时 host 还是 about:blank，
+   * 设下去不会记到 127.0.0.1 名下，页面一加载又被 Preferences 里的 2x 覆盖回去
+   * （2026-11-25 实测：只在建窗时设，视口仍是 172×181）。
+   */
+  win.webContents.setZoomFactor(1);
+  win.webContents.on('did-finish-load', () => {
+    win?.webContents.setZoomFactor(1);
+  });
+
   win.webContents.on('did-fail-load', (_event, code, description, validatedUrl) => {
     trace(`did-fail-load code=${code} ${description} url=${validatedUrl}`);
   });
