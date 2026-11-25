@@ -42,7 +42,7 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 > 想校验下载是否完整：Releases 里同时提供 `SHA256SUMS-full.txt`，用 `Get-FileHash <zip> -Algorithm SHA256` 对比即可。
 
 <details>
-<summary>另一种方式：用 Git 克隆（仓库不含模型，安装时要联网下 464MB）</summary>
+<summary>另一种方式：用 Git 克隆（仓库不含模型，走 Release 模型包）</summary>
 
 ```bash
 git clone https://github.com/<你的账号>/dsh-game-copilot.git
@@ -50,7 +50,7 @@ cd dsh-game-copilot
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
-这种方式下，若维护者在 `config/release.json` 填了模型包直链和 SHA256，脚本会优先走该镜像并校验；留空则走 HuggingFace 官方下载。
+仓库不含模型，但 Releases 里提供了单独的模型包 `dsh-game-copilot-model-small.zip`。正式发布时 `config/release.json` 会预置它的直链和 SHA256，脚本会自动下载并校验，这一路不用碰 HuggingFace；只有校验失败或镜像不可用时才回退官方源。校验值见 Releases 里的 `SHA256SUMS.txt`。
 
 </details>
 
