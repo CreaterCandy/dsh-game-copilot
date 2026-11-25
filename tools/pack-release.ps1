@@ -71,7 +71,16 @@ try {
     Write-Host '正在压缩完整包（请稍候，约 464MB）…' -ForegroundColor Cyan
     Compress-Archive -LiteralPath $appDir -DestinationPath $zip -CompressionLevel Optimal
 } finally {
-    Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
+    # 清临时目录失败不能拖垮整个流程：某些安全策略会对"一次删除 N 个文件"
+    # 弹确认，抛的是 NativeCommandError，-ErrorAction SilentlyContinue 管不住，
+    # 之前就在这一步 throw，导致 zip 明明打好了却没生成校验值。
+    if (Test-Path -LiteralPath $stage) {
+        try {
+            Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction Stop
+        } catch {
+            Write-Host "临时目录没清掉，手动删一下即可（不影响产物）：$stage" -ForegroundColor Yellow
+        }
+    }
 }
 
 $sha = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
