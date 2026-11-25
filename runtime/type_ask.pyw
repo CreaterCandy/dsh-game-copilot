@@ -71,7 +71,6 @@ def main() -> int:
 
     bar = tk.Frame(root)
     bar.pack(side="top", fill="x", padx=12, pady=(0, 10))
-    tk.Label(bar, text="Enter 发送 · Esc 取消", font=("Microsoft YaHei UI", 8), fg="#888").pack(side="left")
     tk.Button(bar, text="取消", command=close, width=6).pack(side="right")
     tk.Button(bar, text="问", command=send, width=6).pack(side="right", padx=(0, 6))
 
