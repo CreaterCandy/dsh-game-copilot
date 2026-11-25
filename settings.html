@@ -360,7 +360,7 @@ body.embed .wrap{gap:12px;}
   <!-- ② 语音问答（原「按键问答」+ 原「语音播报」合并成一张） -->
   <div data-page-node-id="B9BzDSDF2HFUtaAauu4X0f" class="card">
     <h3 data-page-node-id="ueSJ7ECHa6sASETlXIMCFp" class="card__title">语音问答</h3>
-    <p data-page-node-id="73XVrAGDfony26huko3D0F" class="note">按住说话键问，它出声答。打字问、问剪贴板走的也是这条链路——同一个模型、同一套要不要截图的判断。</p>
+    <p data-page-node-id="73XVrAGDfony26huko3D0F" class="note">按住说话键问，它出声答；念剪贴板也用当前音色朗读。都在同一份配置里，模型与截图开关共用。</p>
     <div data-page-node-id="Uy5jQiMkExozup09kMWPWb" class="row">
       <div data-page-node-id="7LAZ7l3AHGyC64jqJIimcq" class="row__label">启用</div>
       <div data-page-node-id="mzwFBIQ9oieDigueN9RE1w" class="row__body">
@@ -533,18 +533,8 @@ body.embed .wrap{gap:12px;}
         <p data-page-node-id="g6eoj0owbLER88AfDn4wtp" class="hint" data-tip="坐标不在任何屏幕内，已拉回右下角；小窗尺寸超过工作区也已压缩" id="posWarn" style="display:none;color:var(--warn)">坐标/尺寸已自动修正到屏内</p>
       </div>
     </div>
-    <div data-page-node-id="DVY4rG4PkElusNgqbhQ2bz" class="subhead">打字问它</div>
-    
-    <div data-page-node-id="JrVHKGFIDgEf9Wushaf8UZ" class="preview" id="typePreview">
-      <div data-page-node-id="SGft6BV6OUBTDBgOowdYU7" class="preview__t">按 Ctrl + Alt + T 后，小窗顶部会多出这一条 · 仅示意，不是真输入框</div>
-      <div data-page-node-id="XA5HU30WBuV70jHQNaYfEK" class="winmock">
-        <div data-page-node-id="EETDVlGvg8ASrdWb91nbA9" class="typebar">
-          <input data-page-node-id="vNq5pXCV5lGNFFm4Db3wDF" type="text" id="typeDemo" placeholder="问它点什么…（Enter 发送，Esc 取消）">
-          <button data-page-node-id="vDnBMHIJDIj1JZpCFLMtGD" class="btn btn--primary btn--sm" id="btnTypeSend">发</button>
-        </div>
-        <div data-page-node-id="ORwZQjCbKTSGpeNiDuhHCW" class="winmock__pet">桌宠本体在这里，输入时不会缩小也不会被盖住</div>
-      </div>
-    </div>
+    <div data-page-node-id="DVY4rG4PkElusNgqbhQ2bz" class="subhead">文字输入</div>
+    <p data-page-node-id="SGft6BV6OUBTDBgOowdYU7" class="note">「打字提问输入框」尚未实现，设置页留的热键位不会触发任何功能。现在想在游戏里用文字：<b>复制问题 → 按 Ctrl + Alt + W 念出来</b>（只朗读，不走模型问答）；要问模型就用按住说话的热键。</p>
   </div>
 
   <!-- ④ 它怎么说话 -->
@@ -810,22 +800,6 @@ body.embed .wrap{gap:12px;}
   }
   btnWin.addEventListener('click', function () { winShown = !winShown; paintWin(); });
   paintWin();
-
-  // 输入条预览：点「发」或按 Enter 给一句假反馈，免得像个坏按钮
-  var typeDemo = document.getElementById('typeDemo');
-  var TYPEPH = '问它点什么…（Enter 发送，Esc 取消）';
-  function fakeSend() {
-    var v = (typeDemo.value || '').trim();
-    if (!v) { typeDemo.focus(); return; }
-    typeDemo.value = '';
-    typeDemo.placeholder = '已发送「' + (v.length > 14 ? v.slice(0, 14) + '…' : v) + '」→ 答案出在气泡里';
-    setTimeout(function () { typeDemo.placeholder = TYPEPH; }, 2800);
-  }
-  document.getElementById('btnTypeSend').addEventListener('click', fakeSend);
-  typeDemo.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); fakeSend(); }
-    if (e.key === 'Escape') { typeDemo.value = ''; typeDemo.blur(); }
-  });
 
   // 「用哪个模型」跟着 ① 的模型名走，证明它是同一份配置
   var mdlName = document.getElementById('mdlName');
