@@ -225,7 +225,14 @@ if (-not (Test-Path (Split-Path $profile -Parent))) {
     Write-Host "没找到 DSH profile 目录：$profile" -ForegroundColor Yellow
     Write-Host '请先安装并至少启动一次 DeepSeek Harness，然后重跑本脚本。' -ForegroundColor Yellow
 } else {
-    Copy-Item (Join-Path $root 'plugin') $profile -Recurse -Force
+    # 复制 plugin\* 的**内容**，不要复制 plugin 目录本身。
+    # 目标目录已存在时（重装/升级），Copy-Item 目录会在下面再建一层 plugin\，
+    # 新代码躺在新嵌套里、插件加载的仍是根目录那份旧的——实测过，等于升级无效。
+    Copy-Item (Join-Path $root 'plugin\*') $profile -Recurse -Force
+    if (Test-Path (Join-Path $profile 'plugin\index.js')) {
+        Write-Host '  发现多余的 plugin\ 嵌套目录（旧版脚本留下的），可以删：' -ForegroundColor Yellow
+        Write-Host "    Remove-Item -Recurse -Force '$(Join-Path $profile 'plugin')'" -ForegroundColor Yellow
+    }
     Write-Host "插件已装到 $profile" -ForegroundColor Green
 
     # 登记 runtime 真实路径。打包安装后插件在 node_modules 里，靠相对路径算不回工程根
