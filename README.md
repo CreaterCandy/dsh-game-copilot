@@ -2,9 +2,9 @@
 
 打游戏时按住一个键说话，它看一眼当前画面，把建议显示在桌宠气泡里，同时念出来——不用切出游戏、不用打字。
 
-![桌宠气泡效果](plugin/assets/screenshot-1.png)
+![回答直接显示在气泡里，同时念出来](plugin/assets/screenshot-1.png)
 
-> Windows + DSH 环境下使用。动画素材来自上游且**禁止商用**，请以非商用方式使用，详见 `THIRD_PARTY_NOTICES.md`。
+> Windows + DSH 环境下使用。桌宠动画素材来自上游，**仅限免费使用、不可用于商业产品**；个人使用与分享不受限制，详见 `THIRD_PARTY_NOTICES.md`。
 
 ## 演示
 
