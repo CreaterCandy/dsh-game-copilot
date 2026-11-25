@@ -1,6 +1,6 @@
 {
   "_说明": "默认配置。setup.ps1 会在 %DSH_HOME%\\dsh-game-copilot.json 不存在时复制过去；已经存在就不动。设置页改的也是这一份。",
-  "enabled": true,
+  "enabled": false,
   "askEnabled": true,
   "askBackend": "http",
   "askApi": {

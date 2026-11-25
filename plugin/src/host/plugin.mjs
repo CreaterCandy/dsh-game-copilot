@@ -39,7 +39,7 @@ import {
   matchesGame,
   normalizeConfig,
 } from './config.mjs';
-import { readUserConfig, writeUserConfig } from './config-store.mjs';
+import { migrateAutoSpeakOff, readUserConfig, writeUserConfig } from './config-store.mjs';
 import { electronBinary, startOverlayWindow } from './desktop-window.mjs';
 import { redactVisionApi, testCustomApi } from './vision-api.mjs';
 import { runProbe } from './http-llm.mjs';
@@ -228,13 +228,18 @@ const STATE_KEYS = ['presence', 'advice', 'lastError', 'pet', 'typeInput'];
  */
 export function apply(ctx, config) {
   const state = new CompanionState();
-  // 用户覆盖（设置页改的）叠在行配置之上：行配置是"出厂默认/部署默认"，用户改的进 config.json
-  const settings = normalizeConfig({ ...(config ?? {}), ...readUserConfig() });
   const log = (level, message) => {
     const logger = ctx.logger ?? console;
     const fn = typeof logger[level] === 'function' ? logger[level].bind(logger) : null;
     if (fn) fn(`dsh-game-copilot: ${message}`);
   };
+  // 旧版默认 enabled:true（跟设置页写的"默认关"不符）：装好就每 45 秒自动截屏说话。
+  // 只在用户从没点过那个开关时纠正一次，点了的尊重他的选择。
+  if (migrateAutoSpeakOff()) {
+    log('warn', '自动开口的默认值已改为「关闭」（旧版默认开着）：要它主动说话，请在设置页打开「玩游戏时自动开口」');
+  }
+  // 用户覆盖（设置页改的）叠在行配置之上：行配置是"出厂默认/部署默认"，用户改的进 config.json
+  const settings = normalizeConfig({ ...(config ?? {}), ...readUserConfig() });
 
   /** 一次游戏会话的运行态 */
   const session = {

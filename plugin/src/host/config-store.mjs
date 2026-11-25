@@ -35,12 +35,32 @@ export function readUserConfig() {
 export function writeUserConfig(patch) {
   try {
     mkdirSync(HOME, { recursive: true });
-    const next = { ...readUserConfig(), ...(patch && typeof patch === 'object' ? patch : {}) };
-    writeFileSync(CONFIG_FILE, JSON.stringify(next, null, 2), 'utf8');
+    const merged = { ...readUserConfig(), ...(patch && typeof patch === 'object' ? patch : {}) };
+    // 只要这次写的 patch 里带了 enabled，就说明用户自己表过态（设置页开关）。
+    // 记一笔 autoOptIn，默认值迁移以后就不再动他——不能把"用户要开"又给关回去。
+    if (Object.prototype.hasOwnProperty.call(patch ?? {}, 'enabled')) merged.autoOptIn = true;
+    writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2), 'utf8');
     return true;
   } catch {
     return false;
   }
+}
+
+/**
+ * 一次性迁移：把旧版"默认开着"的自动开口改成默认关闭。
+ *
+ * 旧版（含上游 dsh-game-pet 和 v1.0.1）DEFAULTS.enabled = true，而设置页那张卡
+ * 一直标着"默认关"、示例配置也照样写 enabled:true——结果用户从没点过开关，
+ * 一装好就每 45 秒自动截屏调模型说话。这里只纠正一次：
+ *   存盘配置里 enabled 为 true、且没有 autoOptIn 标记 = 从没表过态，按新默认关掉；
+ *   有 autoOptIn 标记（用户在设置页点过）= 他的选择，一律不动。
+ * 返回 true 表示这次真改了，调用方据此写一行日志让用户知道为什么变了。
+ */
+export function migrateAutoSpeakOff() {
+  const stored = readUserConfig();
+  if (stored.autoOptIn) return false;
+  if (stored.enabled !== true) return false;
+  return writeUserConfig({ enabled: false });
 }
 
 export { CONFIG_FILE };
