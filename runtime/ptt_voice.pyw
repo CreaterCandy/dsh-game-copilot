@@ -6,7 +6,8 @@ r"""游戏助理 · Push-to-Talk 守护（按住说话、松开出结果）。
   * 热键全部从 runtime\config.json 读，可随时改，不写死在代码里。
   * 语音用"按住说话、松开出结果"：轮询按键状态（GetAsyncKeyState），
     按下即开始录音、松开即停止并转写；说多长录多长。
-  * 一次性热键（问画面/念剪贴板/退出）仍用 RegisterHotKey，避免轮询全部按键。
+  * 一次性热键（问画面/念剪贴板/打字/退出）用 RegisterHotKey，避免轮询全部按键；
+  * 打字热键先请桌宠小窗在头顶弹气泡输入条，没开小窗才退回独立输入框。
 
 实现要点：
   * 用 win32gui 消息循环驱动，PTT 用定时器每 40ms 检查一次按键状态。
@@ -23,6 +24,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import urllib.request
 import threading
 import time
 import wave
@@ -671,6 +673,34 @@ def run_one_shot(script: str, args: list[str]) -> None:
     )
 
 
+def request_overlay_input() -> bool:
+    """让桌宠小窗在宠物头顶弹气泡式输入条。
+
+    热键在 Python 进程、小窗在独立 Electron 进程，两边本来就在轮询 /state，
+    所以走插件的 /type-ask/start 写状态片即可，不需要新 IPC。
+    返回 False 表示小窗没开/插件没连上，调用方退回独立的 type_ask.pyw 输入框。
+    """
+    try:
+        import pet_voice_bridge as bridge
+
+        port = bridge.discover_port()
+        if not port:
+            return False
+        body = json.dumps({"at": int(time.time() * 1000)}).encode("utf-8")
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/dsh-game-copilot-7341/type-ask/start",
+            data=body,
+            headers={"content-type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=1.5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        return bool(payload.get("ok") and payload.get("overlay"))
+    except Exception as exc:  # noqa: BLE001  热键链路不能被网络异常打断
+        print(f"[hotkey] 小窗输入条唤起失败，退回独立输入框：{exc!r}", file=sys.stderr)
+        return False
+
+
 _last_oneshot = 0.0
 
 
@@ -724,8 +754,10 @@ def pump_messages() -> bool:
                     # 模型作答 + 气泡/TTS）；不再只是把文字念一遍。
                     run_one_shot("ask.py", ["--clipboard"])
                 elif wparam == ID_TYPE:
-                    # Ctrl+Alt+T：弹独立输入框，回车后把文字交给 ask.py 同一链路。
-                    run_one_shot("type_ask.pyw", [])
+                    # Ctrl+Alt+T：优先让桌宠小窗在宠物头顶弹气泡式输入条；
+                    # 没开小窗时退回独立输入框，保证热键永远有反馈。
+                    if not request_overlay_input():
+                        run_one_shot("type_ask.pyw", [])
                 elif wparam == ID_EXIT:
                     return False
             continue

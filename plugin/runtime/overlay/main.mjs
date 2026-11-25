@@ -60,6 +60,8 @@ if (!url) {
 
 let win = null;
 let interactive = false;
+/** 打字输入条打开时临时可聚焦：这是 focusable:false 小窗唯一能收键盘的窗口期。 */
+let inputFocused = false;
 let moveTimer = null;
 /**
  * 拖拽基准（**绝对定位**，不是增量累加）：
@@ -265,6 +267,11 @@ function placeWindow(x, y) {
   win.setBounds({ x: Math.round(x), y: Math.round(y), width: w, height: h });
 }
 
+/** 鼠标穿透只看两件事：指针在宠物命中区，或正在打字输入。 */
+function applyMouseMode() {
+  win?.setIgnoreMouseEvents(!(interactive || inputFocused), { forward: true });
+}
+
 /**
  * 拖拽：**不用** `-webkit-app-region: drag`（那个要求窗口可聚焦/已聚焦，本窗是
  * `focusable: false` 的置顶窗，实测点了没反应），改成渲染层报**光标的屏幕绝对坐标**、
@@ -363,7 +370,31 @@ app.whenReady().then(
       const next = Boolean(value);
       if (next === interactive) return;
       interactive = next;
-      win?.setIgnoreMouseEvents(!next, { forward: true });
+      applyMouseMode();
+    });
+
+    /**
+     * 打字输入条：Electron 20 + Windows 的 setFocusable(true) 实测能动态改，
+     * 所以不用重建窗口。开：可聚焦 + 主动 focus + 鼠标不穿透；关：先 blur 再
+     * 收回 focusable，否则窗口还占着键盘焦点，游戏收不到按键。
+     */
+    ipcMain.on('gp-input-focus', (_event, value) => {
+      const next = Boolean(value);
+      if (next === inputFocused) return;
+      inputFocused = next;
+      if (next) {
+        win?.setFocusable(true);
+        applyMouseMode();
+        win?.show();
+        win?.focus();
+        win?.webContents.focus();
+        trace('input focus ON');
+      } else {
+        win?.blur();
+        win?.setFocusable(false);
+        applyMouseMode();
+        trace('input focus OFF');
+      }
     });
 
     ipcMain.on('gp-set-position', (_event, x, y) => {

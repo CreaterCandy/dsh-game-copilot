@@ -150,7 +150,7 @@ const BUNDLED_ANIMATIONS = (() => {
 })();
 
 /** /state 只暴露这几片（内部状态整包不出门）。 */
-const STATE_KEYS = ['presence', 'advice', 'lastError', 'pet'];
+const STATE_KEYS = ['presence', 'advice', 'lastError', 'pet', 'typeInput'];
 
 /**
  * 插件入口。
@@ -189,6 +189,8 @@ export function apply(ctx, config) {
      *  否则 advice counter 每秒递增，前端气泡计时器被无限重置 → 永不消失。 */
     publishedAdviceAt: 0,
   };
+  /** 置顶小窗的句柄：Ctrl+Alt+T 要靠它判断"气泡输入条能不能弹在宠物头顶"。 */
+  let overlayHandle = null;
 
   // 上次拖到哪里，这次还放那里（patch 里的 windowX/windowY 优先）
   if (session.settings.windowX === null || session.settings.windowY === null) {
@@ -254,6 +256,7 @@ export function apply(ctx, config) {
             y: session.settings.windowY,
             log,
           });
+          overlayHandle = overlay;
           return;
         }
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -265,6 +268,7 @@ export function apply(ctx, config) {
     return () => {
       cancelled = true;
       overlay?.stop();
+      overlayHandle = null;
     };
   }, 'dsh-game-copilot: desktop overlay window');
 
@@ -344,6 +348,55 @@ export function apply(ctx, config) {
     // 小窗的存活探测：宿主在就 200，宿主没了它自己退出
     if (method === 'POST' && route === '/ping') {
       sendJson(res, 200, { ok: true });
+      return;
+    }
+    // Ctrl+Alt+T：热键守护请小窗在宠物头顶弹气泡式输入条。
+    // 热键在 Python 进程、小窗在独立 Electron 进程，state 是两边本来就在轮询的公共通道。
+    if (method === 'POST' && route === '/type-ask/start') {
+      const body = await readJson(req);
+      const at = Number(body?.at) || Date.now();
+      state.write('typeInput', { at, active: true });
+      sendJson(res, 200, { ok: true, overlay: Boolean(overlayHandle?.running?.()) });
+      return;
+    }
+    // 输入条取消/超时：把状态片翻回 inactive，下一次热键才能正确重开。
+    if (method === 'POST' && route === '/type-ask/end') {
+      state.write('typeInput', { at: Date.now(), active: false });
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+    // 输入条提交：复用 ask.py 的完整链路（截图判断 + 模型 + 气泡 + TTS），
+    // 不另写一套打字专用逻辑——语音、剪贴板、打字三条路必须始终同答案。
+    if (method === 'POST' && route === '/type-ask/submit') {
+      const body = await readJson(req);
+      const question = String(body?.question ?? '').trim();
+      state.write('typeInput', { at: Date.now(), active: false });
+      if (!question) {
+        sendJson(res, 200, { ok: false, reason: 'empty-question', message: '问题为空' });
+        return;
+      }
+      const python = copilotPython();
+      const script = path.join(COPILOT_ROOT, 'ask.py');
+      if (!python || !existsSync(script)) {
+        sendJson(res, 200, {
+          ok: false,
+          reason: 'no-python',
+          message: !python ? '没找到 runtime/venv 里的 python.exe，先跑 setup.ps1' : `找不到 ${script}`,
+        });
+        return;
+      }
+      try {
+        const child = spawn(python, [script, question], {
+          cwd: COPILOT_ROOT,
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true,
+        });
+        child.unref();
+        sendJson(res, 200, { ok: true });
+      } catch (error) {
+        sendJson(res, 200, { ok: false, reason: 'spawn-failed', message: errorText(error) });
+      }
       return;
     }
     if (method === 'GET' && route === '/config') {

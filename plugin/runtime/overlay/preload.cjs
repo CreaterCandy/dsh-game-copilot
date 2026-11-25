@@ -29,6 +29,13 @@ contextBridge.exposeInMainWorld('gp', {
   setPosition(x, y) {
     ipcRenderer.send('gp-set-position', x, y);
   },
+  /**
+   * 打字输入期间临时把小窗变成可聚焦，让键盘事件能进输入框。
+   * 平时仍然是 focusable:false 的穿透窗；输入完立刻收回去。
+   */
+  inputFocus(active) {
+    ipcRenderer.send('gp-input-focus', Boolean(active));
+  },
   /** 退出这个小窗 */
   quit() {
     ipcRenderer.send('gp-quit');
