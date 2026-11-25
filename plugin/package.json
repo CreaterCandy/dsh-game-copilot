@@ -1,6 +1,6 @@
 {
   "name": "dsh-game-copilot",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "description": "打游戏时按住热键说话的桌宠助理：看一眼当前画面回答问题，气泡显示并语音播报。支持本地语音识别/合成与任意 OpenAI 兼容端点。",
   "type": "module",
   "license": "MIT",

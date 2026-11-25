@@ -17,13 +17,105 @@ $python = Join-Path $venv 'Scripts\python.exe'
 
 function Write-Step($text) { Write-Host "`n==> $text" -ForegroundColor Cyan }
 
-Write-Step '1/5 检查 Python'
-$py = Get-Command python -ErrorAction SilentlyContinue
-if (-not $py) { throw '没找到 python。先装 Python 3.10+（勾 Add to PATH），再重跑本脚本。' }
-& $py.Source --version
+# 小窗用的 Electron 不走 PATH，只认这几个位置（与 plugin\src\host\desktop-window.mjs 一致）
+function Find-ElectronBinary {
+    $tries = @()
+    if ($env:DSH_GAME_PET_ELECTRON) { $tries += $env:DSH_GAME_PET_ELECTRON }
+    if ($env:DSH_PET_ELECTRON_PATH) { $tries += $env:DSH_PET_ELECTRON_PATH }
+    $dshHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
+    $tries += (Join-Path $dshHome 'electron\electron.exe')
+    if ($env:LOCALAPPDATA) { $tries += (Join-Path $env:LOCALAPPDATA 'electron\electron.exe') }
+    foreach ($t in $tries) {
+        if ($t -and (Test-Path -LiteralPath $t)) { return $t }
+    }
+    return $null
+}
+
+Write-Step '1/5 检查 Python 与 Electron'
+
+# requirements.txt 里 numpy 2.5.x 只支持 Python >= 3.12。低版本 pip 会直接报
+# "No matching distribution found"，所以先挑一个够新的解释器，别让安装半路死掉。
+$minPy = [version]'3.12'
+$pyExe = $null
+$pyVer = $null
+
+$candidates = @()
+# py 启动器能精确点名版本，优先用它挑
+$pyLauncher = Get-Command py -ErrorAction SilentlyContinue
+if ($pyLauncher) {
+    foreach ($v in @('3.14', '3.13', '3.12')) {
+        $out = & $pyLauncher.Source "-$v" -c "import sys; print(sys.executable)" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $out) { $candidates += ([string]$out).Trim() }
+    }
+}
+foreach ($n in @('python', 'python3')) {
+    $c = Get-Command $n -ErrorAction SilentlyContinue
+    if ($c) { $candidates += $c.Source }
+}
+$candidates = $candidates | Where-Object { $_ } | Select-Object -Unique
+
+foreach ($cand in $candidates) {
+    if (-not (Test-Path -LiteralPath $cand)) { continue }
+    $v = & $cand -c "import sys; print('%d.%d.%d' % sys.version_info[:3])" 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $v) { continue }
+    $v = ([string]$v).Trim()
+    try { $parsed = [version]$v } catch { continue }
+    if ($parsed -ge $minPy) {
+        $pyExe = $cand
+        $pyVer = $v
+        Write-Host "  Python $v -> $cand" -ForegroundColor DarkGray
+        break
+    }
+    Write-Host "  跳过 Python $v（低于 3.12）-> $cand" -ForegroundColor DarkGray
+}
+
+if (-not $pyExe) {
+    $pathPy = Get-Command python -ErrorAction SilentlyContinue
+    $have = if ($pathPy) { (& $pathPy.Source --version 2>&1) -join ' ' } else { 'PATH 里没有 python' }
+    throw @"
+需要 Python 3.12 或更高版本。当前：$have
+
+requirements.txt 里锁定的 numpy 2.5.x 只支持 3.12+，低版本装不上。
+（这里故意拒绝继续：低版本下 pip 会失败，但脚本若接着往下跑会打印"完成"，
+  用户以为装好了，其实一个依赖都没装上。宁可现在停。）
+
+三种办法，任选其一：
+  1) 装 Python 3.12+（安装时勾 Add to PATH），然后重跑本脚本；
+  2) 已装 py 启动器的话：py -3.12 -m venv runtime\venv，再重跑本脚本；
+  3) 用 uv：winget install astral-sh.uv，再 uv python install 3.12。
+"@
+}
+
+$electron = Find-ElectronBinary
+if (-not $electron) {
+    Write-Host '  [提示] 没找到 Electron 可执行文件：桌宠透明小窗不会启动，气泡与语音问答仍可用。' -ForegroundColor Yellow
+    Write-Host '         小窗按这四处找（任一命中即可），注意它不看 PATH：' -ForegroundColor Yellow
+    Write-Host '           1) 环境变量 DSH_GAME_PET_ELECTRON = <electron.exe 完整路径>' -ForegroundColor Yellow
+    Write-Host '           2) %DSH_HOME%\electron\electron.exe' -ForegroundColor Yellow
+    Write-Host '           3) %LOCALAPPDATA%\electron\electron.exe' -ForegroundColor Yellow
+    Write-Host '         最省事：把 electron.exe 放到 %LOCALAPPDATA%\electron\electron.exe。' -ForegroundColor Yellow
+    Write-Host '         （npm 全局装的 electron 不会被自动发现，得按上面任一条指定。）' -ForegroundColor Yellow
+} else {
+    Write-Host "  Electron -> $electron" -ForegroundColor DarkGray
+}
 
 Write-Step '2/5 建虚拟环境并装依赖'
-if (-not (Test-Path $python)) { & $py.Source -m venv $venv }
+if (Test-Path $python) {
+    # 已有 venv 可能是旧 Python 建的，版本不够同样装不上依赖，先查清楚
+    $venvVer = & $python -c "import sys; print('%d.%d.%d' % sys.version_info[:3])" 2>$null
+    if ($LASTEXITCODE -eq 0 -and $venvVer) {
+        $venvVer = ([string]$venvVer).Trim()
+        $vn = $null
+        try { $vn = [version]$venvVer } catch { }
+        if ($vn -and $vn -lt $minPy) {
+            throw "已有虚拟环境是 Python $venvVer 建的，低于 3.12，依赖装不上。`n请删掉这个目录后重跑本脚本：$venv"
+        }
+        Write-Host "  复用已有虚拟环境（Python $venvVer）" -ForegroundColor DarkGray
+    }
+} else {
+    & $pyExe -m venv $venv
+    if ($LASTEXITCODE -ne 0) { throw "创建虚拟环境失败（退出码 $LASTEXITCODE）：$venv" }
+}
 
 # 有些 Python 发行版建出的 venv 里，Scripts\python.exe 是启动器，会再拉一个
 # 带控制台的子进程；从 DSH 起守护时就会弹两个空终端窗口。换成基础解释器的
@@ -42,7 +134,17 @@ try {
 }
 
 & $python -m pip install --upgrade pip
+if ($LASTEXITCODE -ne 0) {
+    throw "升级 pip 失败（退出码 $LASTEXITCODE）。检查网络/代理后重跑本脚本。"
+}
+
 & $python -m pip install -r (Join-Path $root 'requirements.txt')
+if ($LASTEXITCODE -ne 0) {
+    # PowerShell 5.1 不会因为原生命令失败而停，必须自己查退出码。
+    # 不查的话 pip 报错后脚本照样走到最后打印"完成"，用户以为装好了，实际全没装。
+    throw "依赖安装失败（退出码 $LASTEXITCODE）。上面有 pip 的原始报错，按报错修好后重跑本脚本即可。"
+}
+Write-Host '  依赖已全部装好' -ForegroundColor DarkGray
 
 Write-Step '3/5 落本地配置'
 $localCfg = Join-Path $runtime 'config.json'

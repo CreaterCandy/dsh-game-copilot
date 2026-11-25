@@ -1,5 +1,5 @@
 {
-  "_说明": "维护者填：Release 模型包直链与 SHA256。两项留空时，setup.ps1 走 faster-whisper 官方下载。模型包解压后应在 runtime/ 下得到 models/ 目录。",
+  "_说明": "维护者填：Release 模型包直链与 SHA256。两项留空时，setup.ps1 走 faster-whisper 官方下载。模型包解压后应在 runtime/ 下得到 models/ 目录。模型文件没变时可以继续指向旧版本 tag 的资产——GitHub 的 release 资产链接是永久的。",
   "modelMirrorUrl": "https://github.com/CreaterCandy/dsh-game-copilot/releases/download/v1.0.0/dsh-game-copilot-model-small.zip",
   "modelSha256": "455a9dbbd348e28e27988148bea27c2ce4756cd095ddbf71a4b3761a51baa9cc"
 }

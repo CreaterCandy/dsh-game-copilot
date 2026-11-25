@@ -66,13 +66,47 @@ def record_wav(path: str, seconds: float) -> str:
 _MODEL = None
 
 
+def _local_model_dir():
+    """本地已下载的模型目录；没有就返回 None。"""
+    try:
+        hits = [p.parent for p in MODEL_DIR.rglob("model.bin")]
+    except OSError:
+        return None
+    if not hits:
+        return None
+    for h in hits:
+        if MODEL_SIZE in str(h):
+            return h
+    return hits[0]
+
+
 def get_model():
-    """加载并常驻 ASR 模型（进程内只加载一次）。"""
+    """加载并常驻 ASR 模型（进程内只加载一次）。
+
+    本地已有模型就直接按目录加载，完全不碰网络。原因：huggingface_hub 的
+    snapshot_download 即使缓存完整也会先发一次联网校验，代理异常（502/超时）
+    会抛 ProxyError 把加载打断——明明装着 464MB 模型，却因为没网用不了，
+    正好和"离线可用"相反。
+    """
     global _MODEL
     if _MODEL is None:
         from faster_whisper import WhisperModel
 
-        print(f"加载 ASR 模型 {MODEL_SIZE} ({COMPUTE_TYPE}, CPU)，首次会下载……", file=sys.stderr)
+        local = _local_model_dir()
+        if local is not None:
+            print(f"加载 ASR 模型 {local}（{COMPUTE_TYPE}, CPU，本地离线）……", file=sys.stderr)
+            try:
+                _MODEL = WhisperModel(
+                    str(local),
+                    device="cpu",
+                    compute_type=COMPUTE_TYPE,
+                )
+                return _MODEL
+            except Exception as exc:  # 缓存残缺时退回联网路径
+                print(f"本地模型加载失败（{exc}），改为联网加载……", file=sys.stderr)
+
+        # 只有本地没有模型时才允许联网，走国内镜像
+        print(f"加载 ASR 模型 {MODEL_SIZE}（{COMPUTE_TYPE}, CPU），首次会下载……", file=sys.stderr)
         _MODEL = WhisperModel(
             MODEL_SIZE,
             device="cpu",
