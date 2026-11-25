@@ -16,6 +16,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+// 用真实探测回答"能不能起小窗"，别在本地预览里编一个答案
+import { electronProbe } from '../plugin/src/host/desktop-window.mjs';
 import {
   DEFAULTS,
   ASK_MODEL_PRESETS,
@@ -180,6 +182,9 @@ function previewTts(settings) {
   });
 }
 
+/** 测试桩里的小窗收起状态（真实宿主会落盘，这里只存内存） */
+let previewOverlayHidden = false;
+
 async function handleApi(req, res, route) {
   // 读配置
   if (req.method === 'GET' && route === '/config') {
@@ -254,6 +259,24 @@ async function handleApi(req, res, route) {
 
   if (req.method === 'GET' && route === '/runtime/status') {
     return sendJson(res, 200, { running: false, testServer: true });
+  }
+
+  // 小窗状态：binary 走真实探测，running 在测试桩里恒为 false（这里不起 Electron）
+  if (req.method === 'GET' && route === '/overlay/status') {
+    return sendJson(res, 200, {
+      ok: true,
+      mode: 'window',
+      binary: Boolean(electronProbe().binary),
+      running: false,
+      hidden: previewOverlayHidden,
+    });
+  }
+
+  if (req.method === 'POST' && route === '/overlay/hidden') {
+    const body = await readJson(req);
+    const asked = body?.hidden;
+    previewOverlayHidden = asked === undefined ? !previewOverlayHidden : asked === true || asked === 'true';
+    return sendJson(res, 200, { ok: true, hidden: previewOverlayHidden, persisted: false, testServer: true });
   }
 
   // 对话日志/排障：与真插件同契约（脱敏、GBK、倒序、tail）

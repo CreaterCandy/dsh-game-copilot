@@ -56,6 +56,12 @@ export const DEFAULTS = {
   /** 置顶小窗位置（虚拟屏坐标，左上角）；null = 自动放在主屏右下角 */
   windowX: null,
   windowY: null,
+  /**
+   * 用户主动把小窗收起了（Ctrl+Alt+H 或设置页按钮）。
+   * 和 overlay 的区别：overlay 决定"用哪种形态"，这个决定"这一种形态要不要显示"。
+   * 收起后照样能问、照样出声，只是屏幕上不出现任何字。
+   */
+  overlayHidden: false,
   /** 人设：决定它怎么说话 */
   persona: '',
   /** 已经玩多久之后才开口（毫秒）——刚开游戏别急着插嘴 */
@@ -275,6 +281,7 @@ export function normalizeConfig(raw) {
   config.overlay = source.overlay === 'browser' ? 'browser' : source.overlay === 'window' ? 'window' : DEFAULTS.overlay;
   config.windowX = optionalNumber(source.windowX, DEFAULTS.windowX);
   config.windowY = optionalNumber(source.windowY, DEFAULTS.windowY);
+  config.overlayHidden = source.overlayHidden === true || source.overlayHidden === 'true';
   config.persona = typeof source.persona === 'string' && source.persona.trim() !== '' ? source.persona.trim() : DEFAULTS.persona;
 
   // 按键问答

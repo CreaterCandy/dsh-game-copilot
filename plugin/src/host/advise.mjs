@@ -24,8 +24,19 @@ import { ASK_MODEL_PRESETS } from './config.mjs';
 import { chat, describe } from './http-llm.mjs';
 
 // 路由判定拆到独立文件，裸 Node 也能单测；这里 re-export 给外部调用方。
+// ⚠️ `export { X } from` **不会**在当前模块创建本地绑定（ESM 语义实测会抛
+//    ReferenceError）。以前只写 re-export 就直接用 BLIND_CONSTRAINT，导致盲答
+//    分支一执行就炸——表现是"没图时要么报错、要么话术完全没生效"。
+//    所以下面必须再显式 import 一次，两行缺一不可。
 export { resolveAskRoute, BLIND_CONSTRAINT } from './ask-route.mjs';
-import { resolveAskRoute } from './ask-route.mjs';
+import {
+  BLIND_CONSTRAINT,
+  BLIND_REFUSAL,
+  BLIND_TAIL_NOTE,
+  blindAnswerIsFabricated,
+  modelAcceptsImage,
+  resolveAskRoute,
+} from './ask-route.mjs';
 
 const llm = await loadDsh('@deepseek-ai/dsh-llm');
 const { BlockAssembler, ReasoningEffortId, createUserMessage } = llm;
@@ -184,18 +195,24 @@ export async function askQuestion({ ctx, config, image, imageType, question, his
     const common = { timeoutMs: config.timeoutMs, maxTokens };
     const prompt = buildAskPrompt({ question: asked, history, detection });
 
-    // 盲答：不传图，且把硬约束拼在人设之前
+    // 盲答：不传图，硬约束拼在人设最前，末尾再补一句提醒（模型对最后一句最敏感）
     if (route.route === 'blind') {
       const reply = await chat({
         api: route.api,
         system: `${BLIND_CONSTRAINT}\n\n${system}`,
-        prompt,
+        prompt: `${prompt}\n\n${BLIND_TAIL_NOTE}`,
         ...common,
       });
       if (!reply.ok) return { ok: false, reason: 'blind-failed', message: reply.message, screen: '' };
-      const answer = sanitizeSay(reply.text);
+      let answer = sanitizeSay(reply.text);
       if (!answer) return { ok: false, reason: 'bad-output', message: '盲答输出不可用', screen: '' };
-      return { ok: true, answer, screen: '', mode: 'blind', via: route.via, noticeBlind: true };
+      // 输出后兜底：没图却开始描述画面 = 脑补，直接换回标准台词（并留痕便于观察命中率）
+      let blindCorrected = false;
+      if (blindAnswerIsFabricated(answer)) {
+        blindCorrected = true;
+        answer = BLIND_REFUSAL;
+      }
+      return { ok: true, answer, screen: '', mode: 'blind', via: route.via, noticeBlind: true, blindCorrected };
     }
 
     // 一步式：作答端自己能看图
@@ -596,11 +613,12 @@ async function visionCandidates(llmService, config) {
   }
 
   // 兜底：注册表里自己声明支持图片输入的模型
+  // 判定统一走 modelAcceptsImage：有的注册表只给 supportsImages:true，
+  // 旧代码只读 inputModalities/modalities 会漏判（work 侧实测）。
   for (const provider of providers) {
     if (provider === 'vision-http') continue;
     for (const model of await safeModels(llmService, provider)) {
-      const modalities = model?.inputModalities ?? model?.modalities;
-      if (Array.isArray(modalities) && modalities.some((m) => String(m).includes('image'))) {
+      if (modelAcceptsImage(model) === true) {
         push(provider, model?.id ?? model?.name);
       }
     }
@@ -658,6 +676,9 @@ export async function inspectVision({ ctx, config }) {
       models: models.slice(0, 12).map((model) => ({
         id: model?.id ?? model?.name ?? '?',
         modalities: model?.inputModalities ?? model?.modalities ?? null,
+        // 真正决定"能不能当识图候选"的判定结果，一起返回给设置页，免得排查时
+        // 只看到 modalities 是 null 就以为不支持（可能它写的是 supportsImages）
+        acceptsImage: modelAcceptsImage(model),
       })),
     });
   }
@@ -680,13 +701,9 @@ export async function inspectVision({ ctx, config }) {
     } catch {
       info = null;
     }
-    const inputs = info?.inputModalities ?? info?.input ?? info?.modalities ?? null;
-    const acceptsImage = Array.isArray(inputs)
-      ? inputs.some((item) => String(item).toLowerCase().includes('image'))
-      : inputs && typeof inputs === 'object'
-        ? Boolean(inputs.image)
-        : null; // null = 元数据没声明，说不好
-    askModel = { provider: askProvider || null, model: askName, acceptsImage };
+    // 元数据三种写法（supportsImages / capabilities / modalities）统一判定；
+    // null = 注册表没声明，界面上照旧显示"说不好"，不当成"不支持"。
+    askModel = { provider: askProvider || null, model: askName, acceptsImage: modelAcceptsImage(info) };
   }
 
   // 注册表可能是空的（本机实测就是）——那就靠免配置的免费匿名视觉模型兜底，

@@ -779,23 +779,60 @@ body.embed .wrap{gap:12px;}
   var cbAuto = document.getElementById('cbAuto');
 
   // ── 小窗显隐：跟「启动助理」完全独立（小窗由插件起，不依赖 ptt_voice） ──
+  // ⚠️ 状态只认后端 /overlay/status。以前这里是写死的 winShown=true，
+  //    Electron 没装、小窗压根没起来，界面上照样绿着写"显示中"，纯误导。
   var ledWin = document.getElementById('ledWin');
   var txtWin = document.getElementById('txtWin');
   var btnWin = document.getElementById('btnWin');
-  var winShown = true;
+  var winShown = true;   // 保留给 #hidden 设计预览的语义
+  var winInfo = null;    // 后端真实状态；null = 还没连上
+  var hashPreview = location.hash || '';
 
   function paintWin() {
-    if (winShown) {
-      ledWin.dataset.on = '1';
-      txtWin.textContent = '小窗 显示中';
-      btnWin.textContent = '隐藏小窗';
-    } else {
+    var st = winInfo;
+    if (!st) {
+      // 没连上插件时不能编一个"显示中"——这正是 work 报的假状态。
+      // 只有 #hidden 设计预览（截图/文档用）才按收起态渲染。
+      ledWin.dataset.on = '0';
+      if (hashPreview.indexOf('hidden') >= 0) {
+        txtWin.textContent = '小窗 已收起（只出声）';
+        btnWin.textContent = '显示小窗';
+      } else {
+        txtWin.textContent = '小窗 状态未知（没连上插件）';
+        btnWin.textContent = '刷新状态';
+      }
+      return;
+    }
+    if (st.mode !== 'window') {
+      ledWin.dataset.on = '0';
+      txtWin.textContent = '小窗 未启用（当前用浏览器浮层）';
+      btnWin.textContent = '刷新状态';
+      return;
+    }
+    if (st.binary === false) {
+      ledWin.dataset.on = '0';
+      txtWin.textContent = '小窗 缺 Electron，起不来';
+      btnWin.textContent = '怎么办';
+      return;
+    }
+    // 收起态排在"未运行"之前：用户主动收起时就该看到"已收起"，
+    // 而不是被"未运行"盖掉（DSH 刚启动那几秒小窗还没起来，会一直是未运行）
+    if (st.hidden) {
       ledWin.dataset.on = '0';
       txtWin.textContent = '小窗 已收起（只出声）';
       btnWin.textContent = '显示小窗';
+      return;
     }
+    if (!st.running) {
+      ledWin.dataset.on = '0';
+      txtWin.textContent = '小窗 未运行（插件刚起或已退出）';
+      btnWin.textContent = '刷新状态';
+      return;
+    }
+    ledWin.dataset.on = '1';
+    txtWin.textContent = '小窗 显示中';
+    btnWin.textContent = '隐藏小窗';
   }
-  btnWin.addEventListener('click', function () { winShown = !winShown; paintWin(); });
   paintWin();
 
   // 「用哪个模型」跟着 ① 的模型名走，证明它是同一份配置
@@ -1307,6 +1344,49 @@ body.embed .wrap{gap:12px;}
     }
     refreshRuntime();
     setInterval(refreshRuntime, 4000);
+
+    // ── 小窗：状态真查后端，按钮真去切换（收起后小窗进程仍在，只是窗口 hide） ──
+    var btnWinReal = take('btnWin');
+    // ⚠️ 必须把引用改指克隆节点：take() 是把原按钮换掉的，上面 paintWin 里那个
+    //    btnWin 还指着已脱离文档的旧节点，改它的 textContent 屏幕上不会有任何变化
+    //    （踩过：状态文字会动、按钮文字死活不变）。
+    btnWin = btnWinReal;
+    function refreshOverlay() {
+      return get('/overlay/status').then(function (st) {
+        winInfo = st && st.ok ? st : null;
+        paintWin();
+      }).catch(function () {
+        winInfo = null;
+        paintWin();
+      });
+    }
+    refreshOverlay();
+    setInterval(refreshOverlay, 4000);
+
+    btnWinReal.addEventListener('click', function () {
+      // 缺 Electron 时点什么都没用，直接说清两条出路（小窗是加分项，浏览器浮层照常）
+      if (winInfo && winInfo.binary === false) {
+        state('没找到 Electron：让 DSH 首次开桌宠时自己下，或设环境变量 DSH_GAME_PET_ELECTRON 指向 electron.exe', false);
+        return;
+      }
+      if (winInfo && winInfo.mode !== 'window') {
+        state('当前是小窗形态没启用（配置里 overlay=browser），先用浏览器浮层', false);
+        return;
+      }
+      var next = !(winInfo && winInfo.hidden);
+      post('/overlay/hidden', { hidden: next })
+        .then(function (r) {
+          if (r && r.ok) {
+            winInfo = Object.assign({}, winInfo || {}, { hidden: r.hidden });
+            paintWin();
+            state(r.hidden ? '小窗已收起（仍能问、仍出声）' : '小窗已显示', true);
+          } else {
+            state('切换失败：' + ((r && r.message) || '宿主没响应'), false);
+          }
+          return refreshOverlay();
+        })
+        .catch(function (e) { state(e.message, false); });
+    });
 
     btnRunReal.addEventListener('click', function () {
       var btn = this;

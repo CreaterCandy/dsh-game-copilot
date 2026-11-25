@@ -47,3 +47,70 @@ export function resolveAskRoute(config) {
   }
   return { route: 'blind', api: null, via: 'none' };
 }
+
+/**
+ * 这个模型到底认不认图 —— 元数据字段五花八门，必须把所有常见写法都认一遍。
+ *
+ * 2026-11-25 work 侧实测：注册表里模型明明声明了 `supportsImages: true`，
+ * 旧代码只读 `inputModalities/modalities`，于是判定"没有支持图片的模型"，
+ * 明明能看图却降级成盲答。
+ *
+ * 返回值三态：true 认图 / false 明确不认 / null 元数据没说（调用方自己决定）。
+ */
+export function modelAcceptsImage(model) {
+  if (!model || typeof model !== 'object') return null;
+
+  // 1) 显式布尔字段（不是所有注册表都按 OpenAI 那套 modalities 写）
+  for (const flag of [model.supportsImages, model.supportsImage, model.supportsVision, model.vision]) {
+    if (typeof flag === 'boolean') return flag;
+  }
+
+  // 2) 能力对象：{ capabilities: { vision: true } } / { capabilities: ['vision'] }
+  const cap = model.capabilities ?? model.capability ?? null;
+  if (Array.isArray(cap)) {
+    if (cap.some((item) => /image|vision/i.test(String(item)))) return true;
+  } else if (cap && typeof cap === 'object') {
+    for (const key of ['image', 'images', 'vision', 'visual']) {
+      if (typeof cap[key] === 'boolean') return cap[key];
+    }
+  }
+
+  // 3) 模态列表：['text','image'] 或 { text:true, image:true }
+  const modalities = model.inputModalities ?? model.modalities ?? model.input ?? null;
+  if (Array.isArray(modalities)) {
+    return modalities.some((item) => /image|vision/i.test(String(item)));
+  }
+  if (modalities && typeof modalities === 'object') {
+    if (typeof modalities.image === 'boolean') return modalities.image;
+    return null;
+  }
+  return null;
+}
+
+/** 盲答时模型的"标准认怂台词"，输出后校验要用同一句，避免两处文案漂移。 */
+export const BLIND_REFUSAL = '我这边看不到画面，只能答不靠画面的问题。';
+
+/** 拼在 prompt **末尾**的追加提醒：模型对最后一句最敏感（system 最前那条容易被长 prompt 冲淡）。 */
+export const BLIND_TAIL_NOTE = `（提醒：本条没有附带任何画面。若必须看到画面才能回答，就只回「${BLIND_REFUSAL}」，不要拿游戏常识猜画面内容。）`;
+
+/**
+ * 盲答输出兜底：明明没图，模型却开始描述画面 —— 直接判为脑补。
+ *
+ * 为什么不只靠提示词：prompt 能压住绝大多数情况，但只要漏一次，用户就会
+ * 收到"你左边那条传送带堵了"这种凭空捏造的具体建议，比不答更糟。
+ * 所以这里做一层输出后校验，命中就换回标准台词，并在日志里留证据。
+ *
+ * 判定要窄：已经明说"看不到"的一律放过（里面本来就带"画面"二字）。
+ */
+export function blindAnswerIsFabricated(answer) {
+  const text = String(answer ?? '').trim();
+  if (!text) return false;
+  // 已经老实说了看不见 = 合规，别再动它
+  if (/看不到|看不见|没有画面|没画面|无法查看|看不到画面|没办法看/.test(text)) return false;
+  // 断言自己在描述画面内容
+  // 只抓"断言自己看到了具体画面/具体方位"的说法，不抓"这个传送带要接三通"这类
+  // 不依赖画面的通用规则——那样会把合理回答也毙掉。
+  return /我(?:看到|看见了)|画面(?:里|中|上)|图(?:里|中)|截图(?:里|中)|屏幕(?:上|中)|你(?:左边|右边|前面|后面|上方|下方|旁边|附近|现在|当前)/.test(
+    text,
+  );
+}

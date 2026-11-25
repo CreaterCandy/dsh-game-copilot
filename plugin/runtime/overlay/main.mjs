@@ -50,7 +50,14 @@ const height = Number(process.env.GP_HEIGHT || 360);
 const wantX = process.env.GP_X ? Number(process.env.GP_X) : null;
 const wantY = process.env.GP_Y ? Number(process.env.GP_Y) : null;
 
-trace(`boot pid=${process.pid} url=${url} size=${width}x${height} at=${wantX},${wantY}`);
+/**
+ * 用户是否把小窗收起了（Ctrl+Alt+H / 设置页按钮）。
+ * 初值由宿主通过 GP_HIDDEN 传入，之后靠 ping 的返回值和宿主保持一致——
+ * 收起后照样在后台跑（能问能出声），只是窗口不可见，别把进程也停掉。
+ */
+let desiredHidden = process.env.GP_HIDDEN === '1';
+
+trace(`boot pid=${process.pid} url=${url} size=${width}x${height} at=${wantX},${wantY} hidden=${desiredHidden}`);
 
 if (!url) {
   trace('GP_OVERLAY_URL missing, exiting');
@@ -160,6 +167,22 @@ async function post(url, body) {
   }
 }
 
+/** 同 post，但把响应体解析出来（ping 要靠它拿"该不该显示"）。失败返回 null。 */
+async function postJson(url, body) {
+  if (!url) return null;
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body ?? {}),
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 function createWindow() {
   const fallback = defaultPosition();
   const spot = visiblePosition(wantX ?? fallback.x, wantY ?? fallback.y);
@@ -263,10 +286,15 @@ function createWindow() {
     (error) => trace(`loadURL rejected: ${error?.message ?? error}`),
   );
   win.once('ready-to-show', () => {
+    // 用户上次是收起态：别再闪一下才消失
+    if (desiredHidden) {
+      trace('ready-to-show -> stay hidden (user collapsed)');
+      return;
+    }
     win?.showInactive();
     trace('ready-to-show -> showInactive');
   });
-  if (process.env.GP_SHOW === '1') {
+  if (process.env.GP_SHOW === '1' && !desiredHidden) {
     win.showInactive();
     trace('GP_SHOW=1 -> showInactive immediately');
   }
@@ -286,6 +314,27 @@ function createWindow() {
     win = null;
   });
   return win;
+}
+
+/**
+ * 显隐小窗。只在状态真的变了才动窗口 —— 否则每 2 秒一次的 ping 会反复
+ * show/hide，屏幕上就是闪。
+ *
+ * 收起 ≠ 关掉：渲染层和 state 轮询都还在跑，照样能问、照样能出声，
+ * 只是屏幕上不出现任何字（用户按 Ctrl+Alt+H 的预期）。
+ */
+function applyHidden(hidden) {
+  const next = hidden === true;
+  if (next === desiredHidden) return;
+  desiredHidden = next;
+  if (!win) return;
+  if (next) {
+    win.hide();
+    trace('applyHidden(true) -> win.hide()');
+  } else {
+    win.showInactive(); // 不用 show()：抢焦点会把游戏切出去
+    trace('applyHidden(false) -> win.showInactive()');
+  }
 }
 
 /**
@@ -502,18 +551,35 @@ app.whenReady().then(
       }
     }, 120);
 
-    // 宿主不在了就退出（每 15 秒探一次）；顺便把窗口状态记一行，排障用
+    /**
+     * 每 2 秒 ping 一次，一举三得：
+     *   1. 宿主没了就退出（连续 3 次失败才退，避免 DSH 重启那几秒被误判）；
+     *   2. 取回 `hidden`，让 Ctrl+Alt+H / 设置页按钮收起的窗口真的消失；
+     *   3. 每 8 拍（约 16 秒）记一行窗口状态，排障用（2 秒记一行会把日志写爆）。
+     */
+    let pingMisses = 0;
+    let pingTicks = 0;
     setInterval(() => {
       void (async () => {
-        if (win) {
+        const payload = await postJson(pingUrl, { pid: process.pid });
+        if (!payload) {
+          pingMisses += 1;
+          if (pingMisses >= 3) {
+            trace(`ping 连续 ${pingMisses} 次失败 -> quit`);
+            app.quit();
+          }
+          return;
+        }
+        pingMisses = 0;
+        if (typeof payload.hidden === 'boolean') applyHidden(payload.hidden);
+        pingTicks += 1;
+        if (pingTicks % 8 === 0 && win) {
           trace(
-            `state alive=${win.isVisible()} bounds=${JSON.stringify(win.getBounds())} onScreen=${win.isOnScreen?.()}`,
+            `state alive=${win.isVisible()} hidden=${desiredHidden} bounds=${JSON.stringify(win.getBounds())} onScreen=${win.isOnScreen?.()}`,
           );
         }
-        const alive = await post(pingUrl, { pid: process.pid });
-        if (!alive) app.quit();
       })();
-    }, 15000);
+    }, 2000);
   },
   (error) => trace(`app.whenReady rejected: ${error?.stack ?? error}`),
 );

@@ -40,7 +40,7 @@ import {
   normalizeConfig,
 } from './config.mjs';
 import { readUserConfig, writeUserConfig } from './config-store.mjs';
-import { startOverlayWindow } from './desktop-window.mjs';
+import { electronBinary, startOverlayWindow } from './desktop-window.mjs';
 import { redactVisionApi, testCustomApi } from './vision-api.mjs';
 import { runProbe } from './http-llm.mjs';
 import { resolveAskRoute } from './ask-route.mjs';
@@ -328,6 +328,7 @@ export function apply(ctx, config) {
             height: session.settings.windowHeight,
             x: session.settings.windowX,
             y: session.settings.windowY,
+            hidden: session.settings.overlayHidden === true,
             log,
           });
           overlayHandle = overlay;
@@ -419,9 +420,36 @@ export function apply(ctx, config) {
       sendJson(res, 200, { ok: true });
       return;
     }
-    // 小窗的存活探测：宿主在就 200，宿主没了它自己退出
+    // 小窗的存活探测：宿主在就 200，宿主没了它自己退出。
+    // 顺带把"该不该显示"带回去 —— 小窗本来就要定时 ping，复用这条通道
+    // 就省掉一整套 IPC / 长连接（Ctrl+Alt+H 改完，下一次 ping 就生效）。
     if (method === 'POST' && route === '/ping') {
-      sendJson(res, 200, { ok: true });
+      sendJson(res, 200, { ok: true, hidden: session.settings.overlayHidden === true });
+      return;
+    }
+    // 小窗真实状态：设置页的灯和按钮只认这里，不再写死"显示中"
+    if (method === 'GET' && route === '/overlay/status') {
+      sendJson(res, 200, {
+        ok: true,
+        mode: session.settings.overlay,
+        // 找不到 Electron 时前端要明确说"缺什么"，不能只显示"未运行"让人以为是配置问题
+        binary: Boolean(electronBinary()),
+        running: Boolean(overlayHandle?.running?.()),
+        hidden: session.settings.overlayHidden === true,
+      });
+      return;
+    }
+    // 显示 / 隐藏小窗（设置页按钮走这里；Ctrl+Alt+H 也打这条）
+    if (method === 'POST' && route === '/overlay/hidden') {
+      const body = await readJson(req);
+      const asked = body?.hidden;
+      const next = asked === undefined
+        ? !(session.settings.overlayHidden === true) // 不传就是翻转，热键用
+        : asked === true || asked === 'true';
+      session.settings = { ...session.settings, overlayHidden: next };
+      const persisted = writeUserConfig({ overlayHidden: next });
+      publish();
+      sendJson(res, 200, { ok: true, hidden: next, persisted });
       return;
     }
     // Ctrl+Alt+T：热键守护请小窗在宠物头顶弹气泡式输入条。

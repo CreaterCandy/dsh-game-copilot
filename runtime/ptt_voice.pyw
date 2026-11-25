@@ -119,6 +119,7 @@ def normalize_hotkeys(cfg: dict) -> dict:
         "speakClipboard": "speak_clipboard",
         "exit": "exit",
         "typeQuestion": "type_question",
+        "toggleWindow": "toggle_window",
     }
     extra = hk.get("extra") or {}
     out = {"ptt_voice": parse(hk.get("ptt"), "capslock")}
@@ -138,6 +139,7 @@ def normalize_hotkeys(cfg: dict) -> dict:
         "speak_clipboard": "ctrl+alt+w",
         "exit": "ctrl+alt+shift+q",
         "type_question": "ctrl+alt+t",
+        "toggle_window": "ctrl+alt+h",
     }
     for new_name, old_name in mapping.items():
         value = extra.get(new_name)
@@ -198,7 +200,7 @@ def apply_plugin_tts(router) -> dict:
 
 # 热键 id
 ID_PTT = 0  # PTT 不用 RegisterHotKey，占位便于统一输出
-ID_ASK, ID_SPEAK, ID_EXIT, ID_TYPE = 1, 2, 3, 4
+ID_ASK, ID_SPEAK, ID_EXIT, ID_TYPE, ID_TOGGLE = 1, 2, 3, 4, 5
 
 
 def hk_vk(spec: dict) -> tuple[int, int]:
@@ -226,6 +228,8 @@ ASK_MODS, _ = hk_vk(HK["ask_screen"])
 SPEAK_MODS, _ = hk_vk(HK["speak_clipboard"])
 EXIT_MODS, _ = hk_vk(HK["exit"])
 TYPE_MODS, _ = hk_vk(HK.get("type_question") or {"modifiers": ["ctrl", "alt"], "key": "t"})
+_TPL_TOGGLE = {"modifiers": ["ctrl", "alt"], "key": "h"}
+TOGGLE_VK_MODS, TOGGLE_VK = hk_vk(HK.get("toggle_window") or _TPL_TOGGLE)
 
 def _hotkey_specs() -> list:
     """(热键 id, 配置键, 中文名, 修饰位, 虚拟键码)。"""
@@ -233,6 +237,9 @@ def _hotkey_specs() -> list:
         (ID_ASK, "ask_screen", "截图问答", ASK_MODS, ASK_VK),
         (ID_SPEAK, "speak_clipboard", "剪贴板提问", SPEAK_MODS, SPEAK_VK),
         (ID_TYPE, "type_question", "打字提问", TYPE_MODS, TYPE_VK),
+        # 设置页一直写着"Ctrl+Alt+H 显示/隐藏小窗"，但以前根本没注册这个键，
+        # 按钮也只是改界面上的假状态。现在真正接上：通知宿主翻转 overlayHidden。
+        (ID_TOGGLE, "toggle_window", "显示/隐藏小窗", TOGGLE_VK_MODS, TOGGLE_VK),
         (ID_EXIT, "exit", "退出守护", EXIT_MODS, EXIT_VK),
     ]
 
@@ -757,6 +764,35 @@ def request_overlay_input() -> bool:
 _last_oneshot = 0.0
 
 
+def toggle_overlay_visible() -> bool:
+    """Ctrl+Alt+H：请宿主翻转 overlayHidden（真把窗口收起来，不是只改界面文字）。
+
+    以前这个热键只在设置页文案里存在、根本没注册，按钮也只是本地改个变量，
+    所以"收起小窗"从来没生效过。现在统一走宿主这一条路：宿主落盘配置 +
+    小窗下次 ping 时按 hidden 自己 hide/show，重启后仍然记得收起状态。
+    """
+    try:
+        import pet_voice_bridge as bridge
+
+        port = bridge.discover_port()
+        if not port:
+            return False
+        # 不传 hidden = 翻转（宿主侧语义），热键不需要先查当前状态
+        body = json.dumps({}).encode("utf-8")
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/dsh-game-copilot-7341/overlay/hidden",
+            data=body,
+            headers={"content-type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=1.5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        return bool(payload.get("ok"))
+    except Exception as exc:  # noqa: BLE001  热键链路不能被网络异常打断
+        print(f"[hotkey] 小窗显隐失败：{exc!r}", file=sys.stderr)
+        return False
+
+
 def pump_ptt(ptt_active: bool, ptt_pressed_at: float) -> tuple[bool, float]:
     """检查一次 PTT 按键状态：按下开始录、松开触发转写。返回更新后的状态。"""
     if _busy:
@@ -811,6 +847,9 @@ def pump_messages() -> bool:
                     # 没开小窗时退回独立输入框，保证热键永远有反馈。
                     if not request_overlay_input():
                         run_one_shot("type_ask.pyw", [])
+                elif wparam == ID_TOGGLE:
+                    # Ctrl+Alt+H：显示/隐藏小窗。收起后照样能问能出声，只是屏幕上不出字。
+                    toggle_overlay_visible()
                 elif wparam == ID_EXIT:
                     return False
             continue
@@ -842,7 +881,7 @@ def _suspend_hotkeys() -> None:
     退出键（Ctrl+Alt+Shift+Q）**故意保留**：待机时用户还得能手动叫停这个进程，
     否则只能开任务管理器。
     """
-    for hk in (ID_ASK, ID_SPEAK, ID_TYPE):
+    for hk in (ID_ASK, ID_SPEAK, ID_TYPE, ID_TOGGLE):
         try:
             win32gui.UnregisterHotKey(0, hk)
         except Exception:
@@ -852,7 +891,7 @@ def _suspend_hotkeys() -> None:
 def _reregister_hotkeys() -> None:
     """宿主回来后重新抢热键。先把 4 个 id 全释放一遍——待机时退出键还握着，
     直接重注册同一个 id 会被 Win32 判 1409（自己占自己的）。"""
-    for hk in (ID_ASK, ID_SPEAK, ID_EXIT, ID_TYPE):
+    for hk in (ID_ASK, ID_SPEAK, ID_EXIT, ID_TYPE, ID_TOGGLE):
         try:
             win32gui.UnregisterHotKey(0, hk)
         except Exception:
@@ -919,7 +958,7 @@ def message_loop() -> None:
             ptt_active, ptt_pressed_at = pump_ptt(ptt_active, ptt_pressed_at)
             time.sleep(0.04)
     finally:
-        for hk in (ID_ASK, ID_SPEAK, ID_EXIT, ID_TYPE):
+        for hk in (ID_ASK, ID_SPEAK, ID_EXIT, ID_TYPE, ID_TOGGLE):
             try:
                 win32gui.UnregisterHotKey(0, hk)
             except Exception:
