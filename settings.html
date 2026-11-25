@@ -360,7 +360,7 @@ body.embed .wrap{gap:12px;}
   <!-- ② 语音问答（原「按键问答」+ 原「语音播报」合并成一张） -->
   <div data-page-node-id="B9BzDSDF2HFUtaAauu4X0f" class="card">
     <h3 data-page-node-id="ueSJ7ECHa6sASETlXIMCFp" class="card__title">语音问答</h3>
-    <p data-page-node-id="73XVrAGDfony26huko3D0F" class="note">按住说话键问，它出声答；念剪贴板也用当前音色朗读。都在同一份配置里，模型与截图开关共用。</p>
+    <p data-page-node-id="73XVrAGDfony26huko3D0F" class="note">按住说话键问，它出声答；打字问、剪贴板问也都走同一套模型与截图判断。都在同一份配置里。</p>
     <div data-page-node-id="Uy5jQiMkExozup09kMWPWb" class="row">
       <div data-page-node-id="7LAZ7l3AHGyC64jqJIimcq" class="row__label">启用</div>
       <div data-page-node-id="mzwFBIQ9oieDigueN9RE1w" class="row__body">
@@ -394,7 +394,7 @@ body.embed .wrap{gap:12px;}
             <input data-page-node-id="ICZiaYEt4zIKweDoUeQAJN" type="text" value="Ctrl + Alt + Q" readonly="" data-hk="ask">
           </div>
           <div data-page-node-id="L07aS7x3DHn76LgIW6fju7" class="hk-cell">
-            <label data-page-node-id="nJzD4oQEaXBKGZAJ69D1li" class="hk-on"><input data-page-node-id="Dcwv6POyV4yy96cHawO98x" type="checkbox" data-hk-on="clip" checked=""> 念剪贴板</label>
+            <label data-page-node-id="nJzD4oQEaXBKGZAJ69D1li" class="hk-on"><input data-page-node-id="Dcwv6POyV4yy96cHawO98x" type="checkbox" data-hk-on="clip" checked=""> 剪贴板问答</label>
             <input data-page-node-id="sud3mSzIV21I3BEvkKaBmD" type="text" value="Ctrl + Alt + W" readonly="" data-hk="clip">
           </div>
           <div data-page-node-id="A4scjbHNcMdx0I5o05Z42H" class="hk-cell">
@@ -406,10 +406,9 @@ body.embed .wrap{gap:12px;}
       </div>
     </div>
     <div data-page-node-id="6s2Mb9PxrHqX0X7wLamxMF" class="row">
-      <div data-page-node-id="em4rsppsNYivFD0GimVGoV" class="row__label">剪贴板用途</div>
+      <div data-page-node-id="em4rsppsNYivFD0GimVGoV" class="row__label">剪贴板问答</div>
       <div data-page-node-id="nALzdcwG8YurY6vRFfDObd" class="row__body">
-        <select data-page-node-id="bundah4NLcAkyLYO5Esv4o" style="max-width:250px"><option data-page-node-id="8H92BCYI3o576X4xAItJ4E">念出来（现在的行为）</option><option data-page-node-id="Q0rtNEhSL2A6w9MCp59V4u">当问题问它（含截屏判断）</option></select>
-        <p data-page-node-id="Td2m472shS3mrDfFcDx0T7" class="hint" data-tip="在记事本、聊天框写好问题复制，按热键直接问；不抢焦点，全屏游戏不会切出去">复制问题后按 Ctrl+Alt+W，不切出游戏</p>
+        <p class="note">复制问题后按 Ctrl + Alt + W，会把文字当问题问它（看图能力自动判断），答案进气泡并念出来。全程不抢焦点，全屏游戏不会切出去。</p>
       </div>
     </div>
     <div data-page-node-id="DBuCJuy4qIk6MrdAhUALBy" class="row">
@@ -534,7 +533,7 @@ body.embed .wrap{gap:12px;}
       </div>
     </div>
     <div data-page-node-id="DVY4rG4PkElusNgqbhQ2bz" class="subhead">文字输入</div>
-    <p data-page-node-id="SGft6BV6OUBTDBgOowdYU7" class="note">「打字提问输入框」尚未实现，设置页留的热键位不会触发任何功能。现在想在游戏里用文字：<b>复制问题 → 按 Ctrl + Alt + W 念出来</b>（只朗读，不走模型问答）；要问模型就用按住说话的热键。</p>
+    <p class="note">按 Ctrl + Alt + T 会弹出一个小输入框：写好问题按 Enter 发送，和按住说话走同一条问答链路（看图判断 + 气泡 + 语音）；Esc 取消。输入框会短暂抢焦点，全屏独占游戏可能退出全屏——这种情况用上面的 Ctrl + Alt + W 剪贴板问答，全程不切窗。</p>
   </div>
 
   <!-- ④ 它怎么说话 -->
@@ -861,7 +860,7 @@ body.embed .wrap{gap:12px;}
   // ── 热键捕获：点格子 → 按一个键（可带修饰键）→ 立刻写入，冲突拒绝 ──
   var hkWarn = document.getElementById('hkWarn');
   var recording = null;
-  var HK_NAMES = { ptt: '按住说话', type: '打字提问', ask: '问当前画面', clip: '念剪贴板', exit: '退出守护', toggle: '显示/隐藏小窗' };
+  var HK_NAMES = { ptt: '按住说话', type: '打字提问', ask: '问当前画面', clip: '剪贴板问答', exit: '退出守护', toggle: '显示/隐藏小窗' };
 
   function keyName(e) {
     var c = e.code || '';

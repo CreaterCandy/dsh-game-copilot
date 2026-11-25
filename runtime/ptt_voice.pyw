@@ -101,15 +101,35 @@ def normalize_hotkeys(cfg: dict) -> dict:
         "askScreen": "ask_screen",
         "speakClipboard": "speak_clipboard",
         "exit": "exit",
+        "typeQuestion": "type_question",
     }
     extra = hk.get("extra") or {}
     out = {"ptt_voice": parse(hk.get("ptt"), "capslock")}
+
+    def legacy_key(name: str) -> str:
+        """旧格式里热键可能直接是字符串（askScreen:"ctrl+alt+q"），
+        也可能是 {key:...} 字典。两种都要吃，否则旧配置一加载就 AttributeError。"""
+        raw = hk.get(name)
+        if isinstance(raw, str):
+            return raw
+        if isinstance(raw, dict):
+            return str(raw.get("key") or "")
+        return ""
+
+    defaults = {
+        "ask_screen": "ctrl+alt+q",
+        "speak_clipboard": "ctrl+alt+w",
+        "exit": "ctrl+alt+shift+q",
+        "type_question": "ctrl+alt+t",
+    }
     for new_name, old_name in mapping.items():
         value = extra.get(new_name)
         if isinstance(value, dict):
-            out[old_name] = parse(value.get("key"), hk.get(old_name, {}).get("key", ""), value.get("enabled", True))
+            out[old_name] = parse(value.get("key"), legacy_key(old_name) or defaults[old_name], value.get("enabled", True))
         else:
-            out[old_name] = parse(value or hk.get(old_name, {}).get("key", ""))
+            # value 可能是字符串（extra 里的老写法），也可能是 None
+            spec = value if isinstance(value, str) else ""
+            out[old_name] = parse(spec or legacy_key(old_name) or defaults[old_name])
     return out
 
 
@@ -161,7 +181,7 @@ def apply_plugin_tts(router) -> dict:
 
 # 热键 id
 ID_PTT = 0  # PTT 不用 RegisterHotKey，占位便于统一输出
-ID_ASK, ID_SPEAK, ID_EXIT = 1, 2, 3
+ID_ASK, ID_SPEAK, ID_EXIT, ID_TYPE = 1, 2, 3, 4
 
 
 def hk_vk(spec: dict) -> tuple[int, int]:
@@ -184,12 +204,14 @@ def key_down(vk: int) -> bool:
 _, ASK_VK = hk_vk(HK["ask_screen"])
 _, SPEAK_VK = hk_vk(HK["speak_clipboard"])
 _, EXIT_VK = hk_vk(HK["exit"])
+_, TYPE_VK = hk_vk(HK.get("type_question") or {"modifiers": ["ctrl", "alt"], "key": "t"})
 ASK_MODS, _ = hk_vk(HK["ask_screen"])
 SPEAK_MODS, _ = hk_vk(HK["speak_clipboard"])
 EXIT_MODS, _ = hk_vk(HK["exit"])
+TYPE_MODS, _ = hk_vk(HK.get("type_question") or {"modifiers": ["ctrl", "alt"], "key": "t"})
 
 def _register_oneshot_hotkeys() -> None:
-    """注册三个一次性热键；**被占用时明确告知并退出**，不再静默闪退。
+    """注册四个一次性热键；**被占用时明确告知并退出**，不再静默闪退。
 
     2026-11-24 踩坑：旧实例还占着热键时，这里抛
         pywintypes.error: (1409, 'RegisterHotKey', '热键已注册。')
@@ -198,13 +220,15 @@ def _register_oneshot_hotkeys() -> None:
     所以这里既写日志，也弹一个短提示框，把"怎么处理"直接说清楚。
     """
     try:
-        # enabled=false 的热键整条不注册（设置页三个附加热键各有开关）
+        # enabled=false 的热键整条不注册（设置页附加热键各有开关）
         if HK.get("ask_screen", {}).get("enabled", True):
             win32gui.RegisterHotKey(0, ID_ASK, ASK_MODS, ASK_VK)
         if HK.get("speak_clipboard", {}).get("enabled", True):
             win32gui.RegisterHotKey(0, ID_SPEAK, SPEAK_MODS, SPEAK_VK)
         if HK.get("exit", {}).get("enabled", True):
             win32gui.RegisterHotKey(0, ID_EXIT, EXIT_MODS, EXIT_VK)
+        if (HK.get("type_question") or {}).get("enabled", True):
+            win32gui.RegisterHotKey(0, ID_TYPE, TYPE_MODS, TYPE_VK)
         return
     except Exception as e:  # noqa: BLE001
         if getattr(e, "winerror", None) != 1409:
@@ -696,7 +720,12 @@ def pump_messages() -> bool:
                 if wparam == ID_ASK:
                     run_one_shot("ask.py", [])
                 elif wparam == ID_SPEAK:
-                    run_one_shot("speak_clipboard.py", [])
+                    # Ctrl+Alt+W：剪贴板里的问题当提问送进完整链路（截图判断 +
+                    # 模型作答 + 气泡/TTS）；不再只是把文字念一遍。
+                    run_one_shot("ask.py", ["--clipboard"])
+                elif wparam == ID_TYPE:
+                    # Ctrl+Alt+T：弹独立输入框，回车后把文字交给 ask.py 同一链路。
+                    run_one_shot("type_ask.pyw", [])
                 elif wparam == ID_EXIT:
                     return False
             continue
@@ -716,7 +745,7 @@ def message_loop() -> None:
             ptt_active, ptt_pressed_at = pump_ptt(ptt_active, ptt_pressed_at)
             time.sleep(0.04)
     finally:
-        for hk in (ID_ASK, ID_SPEAK, ID_EXIT):
+        for hk in (ID_ASK, ID_SPEAK, ID_EXIT, ID_TYPE):
             try:
                 win32gui.UnregisterHotKey(0, hk)
             except Exception:
