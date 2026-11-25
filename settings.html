@@ -360,7 +360,7 @@ body.embed .wrap{gap:12px;}
   <!-- ② 语音问答（原「按键问答」+ 原「语音播报」合并成一张） -->
   <div data-page-node-id="B9BzDSDF2HFUtaAauu4X0f" class="card">
     <h3 data-page-node-id="ueSJ7ECHa6sASETlXIMCFp" class="card__title">语音问答</h3>
-    <p data-page-node-id="73XVrAGDfony26huko3D0F" class="note">按住说话键问，它出声答；打字问、剪贴板问也都走同一套模型与截图判断。都在同一份配置里。</p>
+    <p data-page-node-id="73XVrAGDfony26huko3D0F" class="note">按住说话键问，它出声答；打字问、剪贴板问也走这条链路。</p>
     <div data-page-node-id="Uy5jQiMkExozup09kMWPWb" class="row">
       <div data-page-node-id="7LAZ7l3AHGyC64jqJIimcq" class="row__label">启用</div>
       <div data-page-node-id="mzwFBIQ9oieDigueN9RE1w" class="row__body">
@@ -396,19 +396,19 @@ body.embed .wrap{gap:12px;}
           <div data-page-node-id="L07aS7x3DHn76LgIW6fju7" class="hk-cell">
             <label data-page-node-id="nJzD4oQEaXBKGZAJ69D1li" class="hk-on"><input data-page-node-id="Dcwv6POyV4yy96cHawO98x" type="checkbox" data-hk-on="clip" checked=""> 剪贴板问答</label>
             <input data-page-node-id="sud3mSzIV21I3BEvkKaBmD" type="text" value="Ctrl + Alt + W" readonly="" data-hk="clip">
+            <p class="hint">复制问题 → 按键直接问</p>
+          </div>
+          <div class="hk-cell">
+            <label class="hk-on"><input type="checkbox" data-hk-on="type" checked=""> 打字提问</label>
+            <input type="text" value="Ctrl + Alt + T" readonly="" data-hk="type">
+            <p class="hint">在小人头顶弹出输入条</p>
           </div>
           <div data-page-node-id="A4scjbHNcMdx0I5o05Z42H" class="hk-cell">
             <label data-page-node-id="CFBcAzppU4AeJhUPr3KQRG" class="hk-on"><input data-page-node-id="RspHLys3726rMMY3ECZGZQ" type="checkbox" data-hk-on="exit" checked=""> 退出守护</label>
             <input data-page-node-id="wakaFU0Y0N3yoHZT9l6jCk" type="text" value="Ctrl + Alt + Shift + Q" readonly="" data-hk="exit">
           </div>
         </div>
-        <p data-page-node-id="Awkeh4ubpHKlUEiHl8TUN6" class="hint" data-tip="也不参与冲突检查；三个都可以关，退出守护关掉还有「停止」按钮兜底">关掉 = 该键整个不注册</p>
-      </div>
-    </div>
-    <div data-page-node-id="6s2Mb9PxrHqX0X7wLamxMF" class="row">
-      <div data-page-node-id="em4rsppsNYivFD0GimVGoV" class="row__label">剪贴板问答</div>
-      <div data-page-node-id="nALzdcwG8YurY6vRFfDObd" class="row__body">
-        <p class="note">复制问题后按 Ctrl + Alt + W，会把文字当问题问它（看图能力自动判断），答案进气泡并念出来。全程不抢焦点，全屏游戏不会切出去。</p>
+        <p data-page-node-id="Awkeh4ubpHKlUEiHl8TUN6" class="hint" data-tip="也不参与冲突检查；四个都可以关，退出守护关掉还有「停止」按钮兜底">关掉 = 该键整个不注册</p>
       </div>
     </div>
     <div data-page-node-id="DBuCJuy4qIk6MrdAhUALBy" class="row">
@@ -532,8 +532,6 @@ body.embed .wrap{gap:12px;}
         <p data-page-node-id="g6eoj0owbLER88AfDn4wtp" class="hint" data-tip="坐标不在任何屏幕内，已拉回右下角；小窗尺寸超过工作区也已压缩" id="posWarn" style="display:none;color:var(--warn)">坐标/尺寸已自动修正到屏内</p>
       </div>
     </div>
-    <div data-page-node-id="DVY4rG4PkElusNgqbhQ2bz" class="subhead">文字输入</div>
-    <p class="note">按 Ctrl + Alt + T，桌宠小窗会在小人头顶弹出一条气泡式输入条：写好问题按 Enter 发送，和按住说话走同一条问答链路（看图判断 + 气泡 + 语音）；Esc 取消。小窗平时是穿透窗，输入时才会临时拿到键盘焦点，全屏独占游戏仍可能退出全屏（Windows 限制）；没开小窗时会退回独立输入框。不想切窗就用上面的 Ctrl + Alt + W 剪贴板问答。</p>
   </div>
 
   <!-- ④ 它怎么说话 -->
