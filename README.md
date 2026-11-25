@@ -29,7 +29,20 @@
 
 ## 快速开始
 
-**1. 取代码并安装**
+**1. 下载完整包并安装**（推荐）
+
+到 [Releases](https://github.com/<你的账号>/dsh-game-copilot/releases) 下载最新的 `dsh-game-copilot-<版本>-full.zip`（约 430MB，已含语音识别模型），解压得到 `dsh-game-copilot` 文件夹，在其中打开 PowerShell 运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+```
+
+脚本会建 `runtime\venv`、装依赖、落两份默认配置、把插件装进 DSH。模型已经在包里（`runtime\models`），**不会再联网下那 464MB**，只需联网装 pip 依赖。已有配置不会被覆盖，重跑安全。
+
+> 想校验下载是否完整：Releases 里同时提供 `SHA256SUMS-full.txt`，用 `Get-FileHash <zip> -Algorithm SHA256` 对比即可。
+
+<details>
+<summary>另一种方式：用 Git 克隆（仓库不含模型，安装时要联网下 464MB）</summary>
 
 ```bash
 git clone https://github.com/<你的账号>/dsh-game-copilot.git
@@ -37,9 +50,9 @@ cd dsh-game-copilot
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
-脚本会建 `runtime\venv`、装依赖、落两份默认配置、把插件装进 DSH，并预下载约 464MB 的语音识别模型。已有配置不会被覆盖，重跑安全。
+这种方式下，若维护者在 `config/release.json` 填了模型包直链和 SHA256，脚本会优先走该镜像并校验；留空则走 HuggingFace 官方下载。
 
-维护者若在 `config/release.json` 里填了 Release 模型包地址和 SHA256，脚本会优先走这个镜像并校验；留空则走 HuggingFace 官方下载。
+</details>
 
 **2. 配模型**
 
