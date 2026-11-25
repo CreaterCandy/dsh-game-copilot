@@ -468,29 +468,37 @@ async function describeImage({ ctx, llmService, config, image, detection }) {
   const attachment = await attachImage(ctx, image);
   const candidates = await visionCandidates(llmService, config);
   if (candidates.length === 0 || !attachment) {
-    // 注册表这条路可能本来就探测不到（本机实测就是空）——试免配置的免费匿名视觉模型
+    // 注册表这条路可能本来就探测不到（本机实测就是空）——试免配置的免费匿名视觉模型。
+    // 但它是**可选**的：公开版默认关闭（截图会发往第三方匿名服务）。
+    // 关着就别发请求——既保住隐私承诺，也不让对方的 429 把"你没配识图端"这个真原因盖掉。
     if (candidates.length > 0 && !attachment) {
       errors.push('附件服务不可用：注册表候选走的是 DSH 附件引用，这条路用不了');
     }
-    const free = await describeWithCustomApi({
-      api: FREE_FALLBACK_API,
-      image,
-      prompt,
-      timeoutMs: config.timeoutMs,
-    });
-    if (free.ok) {
-      const text = sanitizeScreen(free.text);
-      if (text) {
-        return { ok: true, text, provider: '免费匿名视觉模型', model: FREE_FALLBACK_API.model };
+    const freeOn = Boolean(FREE_FALLBACK_API.enabled && FREE_FALLBACK_API.baseURL);
+    if (freeOn) {
+      const free = await describeWithCustomApi({
+        api: FREE_FALLBACK_API,
+        image,
+        prompt,
+        timeoutMs: config.timeoutMs,
+      });
+      if (free.ok) {
+        const text = sanitizeScreen(free.text);
+        if (text) {
+          return { ok: true, text, provider: '免费匿名视觉模型', model: FREE_FALLBACK_API.model };
+        }
+        errors.push('免费兜底: 输出不可用');
+      } else {
+        errors.push(`免费兜底: ${free.message}`);
       }
-      errors.push('免费兜底: 输出不可用');
-    } else {
-      errors.push(`免费兜底: ${free.message}`);
     }
+    const tail = freeOn
+      ? '免费的匿名视觉模型也没打通'
+      : '本版没有内置免费兜底（不把截图发往第三方）';
     return {
       ok: false,
       reason: 'vision-model-missing',
-      message: `没找到可用的识图模型：注册表里没有支持图片的模型，免费的匿名视觉模型也没打通。可以在设置页「视觉模型 API」里填一个自己的识图服务。${errors.length ? `（${errors.join(' | ')}）` : ''}`,
+      message: `没找到可用的识图模型：注册表里没有支持图片的模型，${tail}。可以在设置页「视觉模型 API」里填一个自己的识图服务。${errors.length ? `（${errors.join(' | ')}）` : ''}`,
     };
   }
 
@@ -707,16 +715,23 @@ export async function inspectVision({ ctx, config }) {
   }
 
   // 注册表可能是空的（本机实测就是）——那就靠免配置的免费匿名视觉模型兜底，
-  // 所以设置页的"可用"判定必须把它算进去，否则界面显示"不可用"而实际上能跑。
-  const usable = customUsable || candidates.length > 0 || FREE_FALLBACK_API.model;
+  // 所以设置页的"可用"判定要把它算进去。但必须连 enabled 一起判：
+  // 公开版默认关闭，只判 model 会让界面显示"可用"而实际必然失败（踩过）。
+  const freeUsable = Boolean(FREE_FALLBACK_API.enabled && FREE_FALLBACK_API.model);
+  const usable = customUsable || candidates.length > 0 || freeUsable;
   return {
     available: usable,
     customApi: { ...custom, usable: customUsable },
     providers,
     listing,
     candidates,
-    freeFallback: { url: FREE_FALLBACK_API.baseURL, model: FREE_FALLBACK_API.model, keyless: true },
-    usingFreeFallback: !customUsable && candidates.length === 0,
+    freeFallback: {
+      url: FREE_FALLBACK_API.baseURL,
+      model: FREE_FALLBACK_API.model,
+      keyless: true,
+      enabled: Boolean(FREE_FALLBACK_API.enabled),
+    },
+    usingFreeFallback: freeUsable && !customUsable && candidates.length === 0,
     configured: { provider: config.visionProvider || null, model: config.visionModel || null },
     // 一步式能不能走：这两项都 true 才成立（设置页拿它给用户解释"为什么还要两步"）
     oneShot: {
