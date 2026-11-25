@@ -132,6 +132,10 @@ node tools\test-server.mjs
 
 ## 许可与致谢
 
-本项目代码为 MIT，见 `LICENSE`。在 `bigk5780/dsh` 基础上二次开发；动画素材来自 `PC2005-cloud/dsh-pet`；语音识别用 `SYSTRAN/faster-whisper` 与 `Systran/faster-whisper-small`；可选语音适配器见 `THIRD_PARTY_NOTICES.md`。
+本项目代码为 MIT，见 `LICENSE`。**在 `bigk5780/dsh` 的 `dsh-game-pet` 基础上二次开发**：两步识图、热键守护、桌宠小窗、截屏等实现沿用上游，本仓库的改动与新增见 git 历史。
+
+公开分发版与上游的一处实质差异：**不内置任何第三方识图服务**。上游默认带一个免注册的公共视觉端点，会把截图发往外部服务且有速率限制；本版本已移除，识图只有两条路——DSH 注册表里已声明支持图片的模型，或你自己在设置页填的视觉 API。
+
+动画素材来自 `PC2005-cloud/dsh-pet`；语音识别用 `SYSTRAN/faster-whisper` 与 `Systran/faster-whisper-small`；可选语音适配器见 `THIRD_PARTY_NOTICES.md`。
 
 维护者发布新版本、制作模型包与校验值的流程见 `docs/发布说明.md`。

@@ -1,9 +1,9 @@
 // advise.mjs —— 一次"看图 + 说话"。
 //
 // 为什么是**两步**（踩过的坑，别改回一步）：
-//   本机默认会话模型是 `deepseek-vision`，那是 dsh-vision-router 注册的**自动识图包装**。
-//   包装并不真把图片喂给文本模型，而是让模型**发起识图工具调用**（vision_describe），由宿主去执行。
-//   插件如果直接把 ImageBlock 塞进这个包装的请求里，模型就把工具调用标记
+//   有些 DSH 环境把会话模型配成"自动识图包装"：图并不真交给模型，而是让模型
+//   **发起识图工具调用**（如 vision_describe），由宿主执行后把结果回填。
+//   插件如果直接把 ImageBlock 塞进这种包装的请求里，模型就把工具调用标记
 //   （`<｜｜DSML｜｜ invoke ...>` 那一坨）当正文吐出来——气泡里就出现了"代码"。
 //   所以这里拆开：
 //     第 1 步：用**具备识图能力的** provider/model 把截图转成一段文字描述；
@@ -468,37 +468,18 @@ async function describeImage({ ctx, llmService, config, image, detection }) {
   const attachment = await attachImage(ctx, image);
   const candidates = await visionCandidates(llmService, config);
   if (candidates.length === 0 || !attachment) {
-    // 注册表这条路可能本来就探测不到（本机实测就是空）——试免配置的免费匿名视觉模型。
-    // 但它是**可选**的：公开版默认关闭（截图会发往第三方匿名服务）。
-    // 关着就别发请求——既保住隐私承诺，也不让对方的 429 把"你没配识图端"这个真原因盖掉。
+    // 这条路走不通就到此为止：本插件**不内置任何第三方识图服务**（见文件头说明）。
     if (candidates.length > 0 && !attachment) {
       errors.push('附件服务不可用：注册表候选走的是 DSH 附件引用，这条路用不了');
     }
-    const freeOn = Boolean(FREE_FALLBACK_API.enabled && FREE_FALLBACK_API.baseURL);
-    if (freeOn) {
-      const free = await describeWithCustomApi({
-        api: FREE_FALLBACK_API,
-        image,
-        prompt,
-        timeoutMs: config.timeoutMs,
-      });
-      if (free.ok) {
-        const text = sanitizeScreen(free.text);
-        if (text) {
-          return { ok: true, text, provider: '免费匿名视觉模型', model: FREE_FALLBACK_API.model };
-        }
-        errors.push('免费兜底: 输出不可用');
-      } else {
-        errors.push(`免费兜底: ${free.message}`);
-      }
-    }
-    const tail = freeOn
-      ? '免费的匿名视觉模型也没打通'
-      : '本版没有内置免费兜底（不把截图发往第三方）';
     return {
       ok: false,
       reason: 'vision-model-missing',
-      message: `没找到可用的识图模型：注册表里没有支持图片的模型，${tail}。可以在设置页「视觉模型 API」里填一个自己的识图服务。${errors.length ? `（${errors.join(' | ')}）` : ''}`,
+      message:
+        '没找到可用的识图模型：DSH 注册表里没有支持图片的模型，本插件也不内置第三方识图服务。' +
+        '两种解法：① 打开「截图直接交给主模型看」（主模型本身能看图时首选）；' +
+        '② 在设置页「视觉模型 API」填一个自己的识图服务。' +
+        `${errors.length ? `（${errors.join(' | ')}）` : ''}`,
     };
   }
 
@@ -609,7 +590,7 @@ async function visionCandidates(llmService, config) {
 
   push(config.visionProvider, config.visionModel);
 
-  // dsh-vision-router 的直连视觉路由：它本身就是"把图交给视觉模型"，不经包装、不要工具。
+  // provider 名为 vision-http 的是直连视觉路由：它本身就是"把图交给视觉模型"，不经包装、不要工具。
   // ⚠️ 必须用 `llmService.listProviders()` 这种**方法调用**，不能把函数摘下来再调：
   //    它是挂在服务对象上的方法（内部用 this），摘下来 this 就丢了，探测会静默失败——
   //    踩过，表现为"没找到可用的识图模型"，而路由其实好好地在注册表里。
@@ -622,7 +603,7 @@ async function visionCandidates(llmService, config) {
 
   // 兜底：注册表里自己声明支持图片输入的模型
   // 判定统一走 modelAcceptsImage：有的注册表只给 supportsImages:true，
-  // 旧代码只读 inputModalities/modalities 会漏判（work 侧实测）。
+  // 旧代码只读 inputModalities/modalities 会漏判（实测）。
   for (const provider of providers) {
     if (provider === 'vision-http') continue;
     for (const model of await safeModels(llmService, provider)) {
@@ -633,21 +614,6 @@ async function visionCandidates(llmService, config) {
   }
   return list;
 }
-
-/**
- * 可选兜底：一个公开的免费匿名视觉端点（无需注册/Key）。
- * 公开版默认关闭：它不在本项目控制范围内，且有速率限制；
- * 开启前请确认你愿意把截图发往该第三方服务。
- */
-const FREE_FALLBACK_API = {
-  // 公开版默认关闭：匿名第三方端点会把截图发往外部服务，需在知情前提下自行开启。
-  enabled: false,
-  baseURL: 'https://oai.endpoints.kepler.ai.cloud.ovh.net/v1',
-  model: 'Qwen3.5-397B-A17B',
-  apiKey: '',
-  format: 'openai',
-  maxTokens: 1024,
-};
 
 /** 列出注册的 provider（拿不到就是空数组，绝不抛）。 */
 async function safeProviders(llmService) {
@@ -714,24 +680,15 @@ export async function inspectVision({ ctx, config }) {
     askModel = { provider: askProvider || null, model: askName, acceptsImage: modelAcceptsImage(info) };
   }
 
-  // 注册表可能是空的（本机实测就是）——那就靠免配置的免费匿名视觉模型兜底，
-  // 所以设置页的"可用"判定要把它算进去。但必须连 enabled 一起判：
-  // 公开版默认关闭，只判 model 会让界面显示"可用"而实际必然失败（踩过）。
-  const freeUsable = Boolean(FREE_FALLBACK_API.enabled && FREE_FALLBACK_API.model);
-  const usable = customUsable || candidates.length > 0 || freeUsable;
+  // 可用 = 用户填了自己的识图端，或注册表里探测到能看图的模型。
+  // 没有"内置免费端点"这一项：本插件不内置任何第三方识图服务（公开版已移除）。
+  const usable = customUsable || candidates.length > 0;
   return {
     available: usable,
     customApi: { ...custom, usable: customUsable },
     providers,
     listing,
     candidates,
-    freeFallback: {
-      url: FREE_FALLBACK_API.baseURL,
-      model: FREE_FALLBACK_API.model,
-      keyless: true,
-      enabled: Boolean(FREE_FALLBACK_API.enabled),
-    },
-    usingFreeFallback: freeUsable && !customUsable && candidates.length === 0,
     configured: { provider: config.visionProvider || null, model: config.visionModel || null },
     // 一步式能不能走：这两项都 true 才成立（设置页拿它给用户解释"为什么还要两步"）
     oneShot: {

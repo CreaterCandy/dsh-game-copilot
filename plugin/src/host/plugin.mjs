@@ -369,8 +369,8 @@ export function apply(ctx, config) {
         accountName: data?.accountName ?? '',
         region: data?.region ?? '',
         message: connected
-          ? `已连接：${data?.accountName ?? 'WorkBuddy 账号'}（${data?.region ?? ''}）`
-          : '未连接（去 DSH 左侧「WorkBuddy」面板登录）',
+          ? `已连接：${data?.accountName ?? 'DSH 账号'}（${data?.region ?? ''}）`
+          : '未连接（在 DSH 的模型服务面板登录后即可使用）',
       };
     } catch (error) {
       return { ok: false, connected: false, message: `探测失败：${errorText(error)}` };

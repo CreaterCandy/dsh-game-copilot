@@ -3,8 +3,8 @@
 // 设计要点：
 //  - 只在 Windows 上工作（本机就是 Windows）。PowerShell 源刻意保持纯 ASCII，
 //    中文（窗口标题）只作为数据回传，避免 OEM 代码页把脚本源码读坏。
-//  - 截屏走 per-monitor DPI 感知的 CopyFromScreen（与 dsh-vision-router 同一套做法），
-//    否则多屏/缩放下会截错区域。
+//  - 截屏走 per-monitor DPI 感知的 CopyFromScreen（多屏/缩放环境必须这么做，
+//    否则会截错区域）。
 //  - PowerShell 的 Add-Type 用 CodeDom 编译临时程序集，TEMP 含非 ASCII 字符会编译失败，
 //    所以每次都在系统临时目录下开一个纯 ASCII 的 scratch 目录，并把 TEMP/TMP 指向它。
 import { execFile } from 'node:child_process';

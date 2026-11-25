@@ -108,11 +108,8 @@ function extractText(payload) {
  * @returns {Promise<{ ok: true, text: string } | { ok: false, message: string }>}
  */
 export async function describeWithCustomApi({ api, image, prompt, timeoutMs, signal }) {
-  // 显式关闭的端点一律不发请求。
-  // 踩过的坑：公开版把免费兜底的 enabled 设成 false，但这里不判它，
-  // 结果截图照发第三方、还被公共端点限流成 429，用户看到的错误
-  // 变成"HTTP 429 rate limit"而不是"你没配识图端"——真实原因被盖掉。
-  // 用 === false 严格判：没这个字段的调用方（自定义 API）不受影响。
+  // 显式关掉的端点一律不发请求（设置页"用这个端点识图"的开关）。
+  // 只判字段严格等于 false：调用方没传这个字段时保持原行为，不误伤。
   if (api && api.enabled === false) {
     return { ok: false, message: '未启用（enabled=false）' };
   }
