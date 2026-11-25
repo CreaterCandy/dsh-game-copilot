@@ -93,6 +93,9 @@ textarea{min-height:58px;resize:vertical;line-height:1.5;}
 .pill--bad{background:var(--bad-bg);color:var(--bad);}
 .pill--warn{background:var(--warn-bg);color:var(--warn);}
 .mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;}
+/* 「去改 →」跳过去时闪一圈描边：只滚动过去，用户常常看不出该改哪儿 */
+@keyframes flashRing{0%{box-shadow:0 0 0 0 rgba(36,123,191,.6);}100%{box-shadow:0 0 0 9px rgba(36,123,191,0);}}
+.flash{animation:flashRing .95s ease-out 2;border-radius:8px;}
 
 /* ── 警告条 ── */
 .banner{display:none;gap:9px;align-items:flex-start;padding:9px 11px;border-radius:9px;
@@ -266,8 +269,8 @@ body.embed .wrap{gap:12px;}
       <div data-page-node-id="BzQLTjyL8wBDEa2VHmc77E" class="row__label">来源</div>
       <div data-page-node-id="Psz9HSF092MEGtmgVySPb7" class="row__body">
         <select data-page-node-id="TwLQKzVeAAwLG62GZdkSS3" id="srcSel">
-          <option data-page-node-id="mj8MToSQkAA8F85SrKwoe8" value="http">自定义端点（本地模型或云端 API）</option>
-          <option data-page-node-id="3MlCLtcwFhJWAHHrbm3mKA" value="dsh">DSH 当前会话模型（可选）</option>
+          <option data-page-node-id="mj8MToSQkAA8F85SrKwoe8" value="http">自定义端点（本地模型或云端 API，自己填地址）</option>
+          <option data-page-node-id="3MlCLtcwFhJWAHHrbm3mKA" value="dsh">DSH 里的模型（走 DSH 登录态，不填地址和 Key）</option>
         </select>
         <p data-page-node-id="3Poj3pT53Rly7tiODHFWXx" class="hint" data-tip="llama.cpp / Ollama / LM Studio 和云端 OpenAI 兼容 API 都用 baseURL" id="srcHint">本地与云端填同一格，只是地址不同</p>
       </div>
@@ -309,11 +312,8 @@ body.embed .wrap{gap:12px;}
       <div data-page-node-id="frHPCzzqyXu7jXgsF1BMrN" class="row">
         <div data-page-node-id="5xim15A8bbdw2FKEwQSIga" class="row__label">模型</div>
         <div data-page-node-id="ELMV05RmDyCvfPiSDy4yCQ" class="row__body">
-          <select data-page-node-id="Av4SjwRsjMgwBLJlJ5sqes" id="cloudModel">
-            <option data-page-node-id="rxuejGAxYpxO4aGdpX42JH">DSH 会话模型（由 DSH 端决定）</option>
-            
-            <option data-page-node-id="gEf0HMWs5cijNRydqhnKKB">跟随当前对话的模型</option>
-          </select>
+          <span data-page-node-id="Av4SjwRsjMgwBLJlJ5sqes" class="pill" id="cloudModelPill">跟随 DSH 当前会话模型</span>
+          <p class="hint">用哪个模型由 DSH 决定（就是你在 DSH 对话框里选的那个），这里不用也不能选。</p>
         </div>
       </div>
     </div>
@@ -425,7 +425,7 @@ body.embed .wrap{gap:12px;}
     <div data-page-node-id="DW2UAVfq8XdKUJuSNxdhj5" class="row">
       <div data-page-node-id="exC1Qd4p1VX4SPM7YZbIS1" class="row__label">记忆</div>
       <div data-page-node-id="Ab9xObaL4alMYHvZmKnMV7" class="row__body">
-        <select data-page-node-id="P260A5Xm8qd77S7JpBaLGJ"><option data-page-node-id="Qvidtxf9XnQdtRG6Rh7pNu">只有追问才翻历史（默认）</option><option data-page-node-id="PmfbptNODjtyLXmB0qZIua">每次都带最相关的几条</option><option data-page-node-id="MFdN6Xwdd2Hii6mejhxGxh">完全不带历史</option></select>
+        <select data-page-node-id="P260A5Xm8qd77S7JpBaLGJ" id="selMemory"><option data-page-node-id="Qvidtxf9XnQdtRG6Rh7pNu" value="3">带最近 3 条（默认）</option><option data-page-node-id="PmfbptNODjtyLXmB0qZIua" value="6">带最近 6 条</option><option data-page-node-id="MFdN6Xwdd2Hii6mejhxGxh" value="0">完全不带历史</option></select>
         <p data-page-node-id="TbEgfEglotX2xxK0Kc6SwI" class="hint" data-tip="日志本身不限量留，默认不读">最多 3 条 / 1500 字</p>
       </div>
     </div>
@@ -565,17 +565,17 @@ body.embed .wrap{gap:12px;}
         </div>
         <div data-page-node-id="xxN3YOZUVEZZhQgmLb56JQ" class="row">
           <div data-page-node-id="tzoQ61GQHQyCIRUDi93UkN" class="row__label">节奏</div>
-          <div data-page-node-id="5b5yfFfEjllbXYiBI0x0I5" class="row__body"><div data-page-node-id="OxdhaYD1KG9C0DnDQThkwH" class="inline"><input data-page-node-id="0Q4HpgHuXTzEZkB2aRx7hO" type="text" value="45" style="flex:0 0 70px"><span data-page-node-id="x1h6lGi9AKlH2hlMYgjiBB" class="hint">秒说一句</span><input data-page-node-id="nCogWPB148HpDRTjSLDBwb" type="text" value="15" style="flex:0 0 70px"><span data-page-node-id="zEkJ7GFrUXydkhPEnsCy9s" class="hint">秒后才开口（刚开游戏不插嘴）</span></div></div>
+          <div data-page-node-id="5b5yfFfEjllbXYiBI0x0I5" class="row__body"><div data-page-node-id="OxdhaYD1KG9C0DnDQThkwH" class="inline"><input data-page-node-id="0Q4HpgHuXTzEZkB2aRx7hO" type="text" id="inInterval" value="45" style="flex:0 0 70px"><span data-page-node-id="x1h6lGi9AKlH2hlMYgjiBB" class="hint">秒说一句</span><input data-page-node-id="nCogWPB148HpDRTjSLDBwb" type="text" id="inWarmup" value="15" style="flex:0 0 70px"><span data-page-node-id="zEkJ7GFrUXydkhPEnsCy9s" class="hint">秒后才开口（刚开游戏不插嘴）</span></div></div>
         </div>
         <div data-page-node-id="EgDyBxUjeSZQsyfi7GJlPK" class="row">
           <div data-page-node-id="TIN1IJYrpijd0UxhoAx4DD" class="row__label">哪些游戏算</div>
-          <div data-page-node-id="rokeTU3UvoQwYjJ693W7CX" class="row__body"><input data-page-node-id="GayQTxFSeegRarNy3lhQ5x" type="text" placeholder="进程名或窗口标题关键字，逗号分隔；留空 = 任何前台窗口都算"><p data-page-node-id="pi4V0rTmzAmur6QZh7cmx5" class="hint">空着连看视频也会跟你唠，慎用。</p></div>
+          <div data-page-node-id="rokeTU3UvoQwYjJ693W7CX" class="row__body"><input data-page-node-id="GayQTxFSeegRarNy3lhQ5x" type="text" id="inGames" placeholder="进程名或窗口标题关键字，逗号分隔；留空 = 任何前台窗口都算"><p data-page-node-id="pi4V0rTmzAmur6QZh7cmx5" class="hint">空着连看视频也会跟你唠，慎用。</p></div>
         </div>
         <div data-page-node-id="yjmu4gk6nHkTByvyO0HJtX" class="row">
           <div data-page-node-id="XE6wGudIAzl2vtZlo2eRdn" class="row__label">用哪个模型</div>
           <div data-page-node-id="Ako1AM7pZ0hksGWTFi4O4E" class="row__body">
             <div data-page-node-id="2E3W9V0iJvJslyRwosbC2i" class="inline"><span data-page-node-id="YB7grnjzEgl6UDloXB2Fw4" class="pill" id="autoModelPill">跟随「模型与能力」</span><a data-page-node-id="FCAR0hdjruMHYzMTjAttFv" id="lnkToModel" style="font-size:12px;color:var(--dsw-alias-brand-primary);cursor:pointer">去改 →</a></div>
-            <p data-page-node-id="tGnzYX8kulOzzOhyUNAK83" class="hint" data-tip="同一端点、同一识图判定；要换只改上面 ① 卡">与语音问答共用模型</p>
+            <p data-page-node-id="tGnzYX8kulOzzOhyUNAK83" class="hint" data-tip="同一端点、同一识图判定；要换只改上面 ① 卡">与语音问答共用同一个模型（只在上面的「模型与能力」里改，这里不单独选）</p>
             <p data-page-node-id="Jmc4t4F8Pe4FfIrLIUWC3q" class="hint" data-tip="坐标不在任何屏幕内，已拉回右下角；小窗尺寸超过工作区也已压缩" id="legacyHint" style="display:none">检测到旧配置，点「去改」统一</p>
           </div>
         </div>
@@ -593,15 +593,15 @@ body.embed .wrap{gap:12px;}
         </div>
         <div data-page-node-id="h64utGaYE7IbbzMax9g8dc" class="row">
           <div data-page-node-id="sejYRgPLhQuMG5RJYMyEef" class="row__label">端点</div>
-          <div data-page-node-id="n8EZkcT8RGnFSE5skEriZg" class="row__body"><input data-page-node-id="SSY6eH2u9Lv5DwuoDfWUuE" type="text" placeholder="http://127.0.0.1:11434/v1"></div>
+          <div data-page-node-id="n8EZkcT8RGnFSE5skEriZg" class="row__body"><input data-page-node-id="SSY6eH2u9Lv5DwuoDfWUuE" type="text" id="visionUrl" placeholder="http://127.0.0.1:11434/v1"></div>
         </div>
         <div data-page-node-id="dIPGTfiJfYIGVzCWKDyZGe" class="row">
           <div data-page-node-id="ix97QqKtvN1sWkQA61RBsz" class="row__label">格式 / 模型</div>
-          <div data-page-node-id="dAtq2d8DybTLyTFck0XECb" class="row__body"><div data-page-node-id="4DozT8Kmwd803YEZLIAnBD" class="inline"><select data-page-node-id="CBD4CBF91ayQqsXK2wPo18" style="flex:0 0 180px"><option data-page-node-id="bFYEc3maHrHdWMx46bikKj">OpenAI 兼容</option><option data-page-node-id="AyTZG6nMjF4Ywko1KkQf0N">Anthropic</option></select><input data-page-node-id="d6scjWJ0kyP298bBq0QcQB" type="text" placeholder="例如 qwen2.5vl" style="flex:1 1 180px"></div></div>
+          <div data-page-node-id="dAtq2d8DybTLyTFck0XECb" class="row__body"><div data-page-node-id="4DozT8Kmwd803YEZLIAnBD" class="inline"><select data-page-node-id="CBD4CBF91ayQqsXK2wPo18" id="visionFormat" style="flex:0 0 180px"><option data-page-node-id="bFYEc3maHrHdWMx46bikKj" value="openai">OpenAI 兼容</option><option data-page-node-id="AyTZG6nMjF4Ywko1KkQf0N" value="anthropic">Anthropic</option></select><input data-page-node-id="d6scjWJ0kyP298bBq0QcQB" type="text" id="visionModel" placeholder="例如 qwen2.5vl" style="flex:1 1 180px"></div></div>
         </div>
         <div data-page-node-id="4e3Bdg6lQQVjZjbsrAYgfw" class="row">
           <div data-page-node-id="SqkXpUq7qMVzFf5nWD8Vk6" class="row__label">API Key</div>
-          <div data-page-node-id="nIEAI8mxpWXZGOIiGlvcv3" class="row__body"><input data-page-node-id="UTdlN3DCuFakk7cgsZ19qx" type="text" placeholder="留空 = 不需要"></div>
+          <div data-page-node-id="nIEAI8mxpWXZGOIiGlvcv3" class="row__body"><input data-page-node-id="UTdlN3DCuFakk7cgsZ19qx" type="text" id="visionKey" placeholder="留空 = 不需要"></div>
         </div>
         <div data-page-node-id="FaoNHNOt7l25aNoxnrDPaC" class="row">
           <div data-page-node-id="tBHXbPSFCw5yZC5mkubtuw" class="row__label">一步式</div>
@@ -614,7 +614,7 @@ body.embed .wrap{gap:12px;}
     <details data-page-node-id="QSyDctcLXmH7G4fHtBMlf5" class="group" id="gCloud">
       <summary data-page-node-id="Hi6lmPb4THystJgcJ1cGrs"><span data-page-node-id="M3ygu57Ux9iJSPE9ZklkDD" class="dot" id="dotCloud"></span>DSH 会话模型通道<span data-page-node-id="WixWoa1w3tzs4eHSlfKH3G" class="tag">需账号</span><span data-page-node-id="A7kkXQXhslbZnF36CZg5cU" class="chev">▸</span></summary>
       <div data-page-node-id="EWVwCxHU4pEZHAIY4LxFxW" class="group__body">
-        <p data-page-node-id="y8Ql1lTcy61gCHC3kWfIVJ" class="note">想在「来源」里选 DSH 当前会话模型才需要配这里。不配也能用——上面①填任意兼容端点即可。</p>
+        <p data-page-node-id="y8Ql1lTcy61gCHC3kWfIVJ" class="note">想在「来源」里选「DSH 里的模型」才需要配这里。不配也能用——上面①填任意兼容端点即可。</p>
         <div data-page-node-id="uYYXP3mnWL2aApjiWeSMHI" class="row">
           <div data-page-node-id="XB9CKnUoQtZOw2GMXeTo2S" class="row__label">连接状态</div>
           <div data-page-node-id="QgLLxIhwuZlCYiGZGD06Zo" class="row__body">
@@ -624,7 +624,7 @@ body.embed .wrap{gap:12px;}
         </div>
         <div data-page-node-id="n0d1Bv4YVht95zrgMMmVk3" class="row">
           <div data-page-node-id="rP3WAKxcWI4r0fKLBlqWcX" class="row__label">默认档位</div>
-          <div data-page-node-id="3BW65KhC19MxY0aJ8ZQamo" class="row__body"><select data-page-node-id="5PYkEMNuTWbhHiQ9BU3R31"><option data-page-node-id="zjjfX2eBKCoIjOieCkjqrS">DSH 会话模型（由 DSH 端决定）</option><option data-page-node-id="x8nca5OL7M04Io2TTMH2G5">跟随当前会话模型</option><option data-page-node-id="pOm1M5B3onnaEjJJKwcsAh">跟随当前对话的模型</option></select><p data-page-node-id="7y0uXcHswcbX0NJzs8X9t5" class="hint">只影响云端来源；选自定义端点时这一项不生效。</p></div>
+          <div data-page-node-id="3BW65KhC19MxY0aJ8ZQamo" class="row__body"><span data-page-node-id="5PYkEMNuTWbhHiQ9BU3R31" class="pill">跟随 DSH 当前会话模型</span><p data-page-node-id="7y0uXcHswcbX0NJzs8X9t5" class="hint">用哪个模型由 DSH 决定，和上面 ① 是同一份设置，这里不用选。</p></div>
         </div>
       </div>
     </details>
@@ -841,31 +841,42 @@ body.embed .wrap{gap:12px;}
   var srcSel = document.getElementById('srcSel');
   var httpFields = document.getElementById('httpFields');
   var cloudFields = document.getElementById('cloudFields');
-  var cloudModel = document.getElementById('cloudModel');
 
   function modelLabel() {
-    if (srcSel.value === 'dsh') {
-      return cloudModel.options[cloudModel.selectedIndex].text.replace(/（.*$/, '');
-    }
+    // dsh 档的模型不在这里选（DSH 端决定），所以不读任何控件，给一句话标签就行
+    if (srcSel.value === 'dsh') return 'DSH 当前会话模型';
     return mdlName.value || '（未填）';
   }
   function syncPill() {
     autoModelPill.textContent = modelLabel() + '（同「模型与能力」）';
   }
+  // 「去改 →」跳过去时闪一圈描边：只滚动过去，用户常常看不出该改哪儿
+  function flash(el) {
+    if (!el) return;
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+    setTimeout(function () { el.classList.remove('flash'); }, 1900);
+  }
   function applySource() {
     var dsh = srcSel.value === 'dsh';
-    // 能力探针只探自定义 HTTP 端点；dsh 走 DSH 会话登录态，
-    // 没有 baseURL/Key 可探，按钮会误报"看不了图"——整块收起。
+    // 能力探针只探自定义 HTTP 端点；dsh 走 DSH 会话登录态，没有 baseURL/Key 可探，
+    // 按钮只会误报"看不了图"。所以 dsh 档直接把单选和「测一下」收起来，
+    // 只留一句说明——以前是整块调成半透明，用户以为坏了（截图反馈过）。
     var probeArea = document.getElementById('probeArea');
     var btnProbe = document.getElementById('btnProbe');
     var probeHint = document.getElementById('probeHint');
     var probeDshHint = document.getElementById('probeDshHint');
-    if (probeArea) probeArea.style.opacity = dsh ? '.5' : '1';
+    var probeRadios = probeArea ? probeArea.querySelector('.radios') : null;
+    var probeInline = probeArea ? probeArea.querySelector('.inline') : null;
+    if (probeRadios) probeRadios.style.display = dsh ? 'none' : '';
+    if (probeInline) probeInline.style.display = dsh ? 'none' : '';
+    if (probeArea) probeArea.style.opacity = '1';
     if (btnProbe) btnProbe.disabled = dsh;
     if (probeHint) probeHint.style.display = dsh ? 'none' : '';
     if (probeDshHint) probeDshHint.style.display = dsh ? '' : 'none';
     var probeOutEl = document.getElementById('probeOut');
-    if (probeArea) probeArea.classList.toggle('is-off', dsh);
+    if (probeArea) probeArea.classList.toggle('is-off', false);
     if (dsh && probeOutEl) probeOutEl.textContent = '';
     httpFields.style.display = dsh ? 'none' : 'flex';
     cloudFields.style.display = dsh ? 'flex' : 'none';
@@ -877,13 +888,29 @@ body.embed .wrap{gap:12px;}
     syncPill();
   }
   mdlName.addEventListener('input', syncPill);
-  cloudModel.addEventListener('change', syncPill);
   srcSel.addEventListener('change', applySource);
   applySource();
 
+  // 「去改 →」必须跳到**当前真正生效**的那一格：
+  // dsh 档的模型由 DSH 决定，模型输入框是 display:none 的，
+  // 以前无条件滚到 #mdlName —— 对隐藏元素 scrollIntoView 是空操作，
+  // 用户点了没任何反应（截图反馈过）。所以 dsh 档改跳「来源」，并说明去哪换。
   document.getElementById('lnkToModel').addEventListener('click', function () {
-    document.getElementById('mdlName').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    document.getElementById('mdlName').focus();
+    if (srcSel.value === 'dsh') {
+      srcSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      srcSel.focus();
+      flash(srcSel);
+      // 状态条不共用 attachBackend 里的 state()（那是另一个闭包），直接写这一格
+      var ss = document.getElementById('saveState');
+      if (ss) {
+        ss.textContent = '模型由 DSH 决定：要换模型，在 DSH 对话里切换当前模型';
+        ss.className = 'pill pill--warn';
+      }
+      return;
+    }
+    mdlName.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    mdlName.focus();
+    flash(mdlName);
   });
 
   // 「Ollama 示例」只是快捷填充，不是第三种来源
@@ -1231,6 +1258,26 @@ body.embed .wrap{gap:12px;}
       selCapture.value = c.captureTarget || 'auto';
       cbPtt.checked = !!c.askEnabled;
       if (cbAuto) cbAuto.checked = !!c.enabled;
+      // 自动开口的节奏/白名单：这三格以前**没接线**，填了保存也没用（截图反馈"改了不生效"）
+      var elInterval = document.getElementById('inInterval');
+      var elWarmup = document.getElementById('inWarmup');
+      var elGames = document.getElementById('inGames');
+      if (elInterval) elInterval.value = c.intervalSec != null ? c.intervalSec : 45;
+      if (elWarmup) elWarmup.value = c.warmupMs != null ? Math.round(Number(c.warmupMs) / 1000) : 15;
+      if (elGames) elGames.value = Array.isArray(c.games) ? c.games.join('，') : '';
+      // 记忆条数 / 独立识图端：同样是"界面上有、背后没接"的两块
+      var elMem = document.getElementById('selMemory');
+      if (elMem) { var mem = c.memoryLimit != null ? Number(c.memoryLimit) : 3; elMem.value = String(mem); }
+      var va = c.visionApi || {};
+      if (cbVision) cbVision.checked = !!va.enabled;
+      var elVUrl = document.getElementById('visionUrl');
+      var elVFmt = document.getElementById('visionFormat');
+      var elVModel = document.getElementById('visionModel');
+      var elVKey = document.getElementById('visionKey');
+      if (elVUrl) elVUrl.value = va.baseURL || '';
+      if (elVFmt) elVFmt.value = va.format || 'openai';
+      if (elVModel) elVModel.value = va.model || '';
+      if (elVKey) elVKey.value = (va.hasApiKey || va.apiKey) ? '__KEEP__' : '';
       cbTts.checked = !!(c.tts && c.tts.enabled);
       selTtsEngine.value = (c.tts && c.tts.backend) || 'auto';
       pendingVoice = (c.tts && c.tts.voice) || '';
@@ -1274,6 +1321,18 @@ body.embed .wrap{gap:12px;}
           vision: cap === 'vision' ? 'yes' : cap === 'text' ? 'no' : 'auto',
         },
         captureTarget: val('selCapture', 'auto'),
+        // 以前这几项根本没进 collect()：界面能改、保存后毫无变化（用户实测反馈）
+        intervalSec: Number(val('inInterval', 45)) || 45,
+        warmupMs: (Number(val('inWarmup', 15)) || 15) * 1000,
+        games: String(val('inGames', '')).split(/[,，、\s]+/).map(function (x) { return x.trim(); }).filter(Boolean),
+        memoryLimit: Number(val('selMemory', 3)),
+        visionApi: {
+          enabled: !!(document.getElementById('cbVision') || {}).checked,
+          baseURL: val('visionUrl', '').trim(),
+          model: val('visionModel', '').trim(),
+          format: val('visionFormat', 'openai'),
+          apiKey: val('visionKey', '').trim(),
+        },
         askOneShot: (function () { var el = document.getElementById('cbOneShot'); return el ? el.checked : true; })(),
         enabled: !!(cbAuto && cbAuto.checked),
         askEnabled: cbPtt.checked,
