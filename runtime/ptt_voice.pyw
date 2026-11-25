@@ -45,6 +45,19 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tts"))
 
+# ---- 宿主（DSH）心跳：退出 DSH 后本守护必须静音 ----
+# 为什么要有：本进程是插件用 detached 拉起的（好处是 DSH 重启后能接着用，
+# 不用重新点"启动副驾"）。代价是 DSH 正常退出时我们收不到任何信号，会继续
+# 轮询按键——用户按一下 CapsLock 就 play_cue("start") 滴一声，然后转写失败，
+# 什么结果都没有。
+# 让守护自己查进程？tasklist 实测 164ms，一秒一次太贵（游戏里周期性掉帧）。
+# 改成读插件每 5 秒刷新的心跳文件：stat 一次约 0.01ms，且插件卸载时会立刻删文件。
+_DSH_HOME = Path(os.environ.get("DSH_HOME") or (Path.home() / ".dsh"))
+HEARTBEAT_FILE = _DSH_HOME / "dsh-game-copilot-heartbeat.json"
+HOST_PROBE_SEC = 1.0        # 多久看一次心跳（stat，成本可忽略）
+HOST_GRACE_SEC = 16.0       # 心跳超过这么久没更新 = DSH 已退出（容忍 3 次漏写）
+HOST_EXIT_AFTER_SEC = 300.0 # 离线持续这么久就自己退出，别长期占着内存和热键
+
 # 配置名 -> 虚拟键码。未列出的键给提示，不静默失败。
 VK = {
     "oem_3": 0xC0, "capslock": 0x14,
@@ -212,7 +225,7 @@ SPEAK_MODS, _ = hk_vk(HK["speak_clipboard"])
 EXIT_MODS, _ = hk_vk(HK["exit"])
 TYPE_MODS, _ = hk_vk(HK.get("type_question") or {"modifiers": ["ctrl", "alt"], "key": "t"})
 
-def _register_oneshot_hotkeys() -> None:
+def _register_oneshot_hotkeys(quiet: bool = False) -> None:
     """注册四个一次性热键；**被占用时明确告知并退出**，不再静默闪退。
 
     2026-11-24 踩坑：旧实例还占着热键时，这里抛
@@ -220,6 +233,9 @@ def _register_oneshot_hotkeys() -> None:
     而 pythonw 没有控制台 → 用户双击 start_copilot.cmd 只看到黑框一闪，
     完全不知道"没启动成功"，还会误以为改了配置却不生效。
     所以这里既写日志，也弹一个短提示框，把"怎么处理"直接说清楚。
+
+    quiet=True 是给"宿主回来后重新抢热键"用的：那条路径在后台自动跑，
+    弹窗会莫名其妙糊用户一脸，失败就再等着下一轮重试。
     """
     try:
         # enabled=false 的热键整条不注册（设置页附加热键各有开关）
@@ -235,6 +251,8 @@ def _register_oneshot_hotkeys() -> None:
     except Exception as e:  # noqa: BLE001
         if getattr(e, "winerror", None) != 1409:
             raise
+        if quiet:
+            raise  # 调用方（待机恢复）自己决定要不要重试，不弹窗
         msg = (
             "AI 助理启动失败：热键已被占用。\n\n"
             "最常见的情况是旧实例还在后台跑着（它占着 Caps Lock 等热键），\n"
@@ -765,8 +783,89 @@ def pump_messages() -> bool:
         win32gui.DispatchMessage(msg)
 
 
+# ---- 宿主在线判定 / 待机 / 自退 ----
+# 状态机只有两态：alive（正常工作）与 offline（静音待机）。
+_host = {"alive": True, "checked_at": 0.0, "offline_since": 0.0}
+
+
+def host_alive() -> bool:
+    """DSH 是否还活着：看插件每 5 秒刷新的心跳文件 mtime。
+
+    没有心跳文件（老版本插件，或用户在 DSH 之外手动起的守护）→ 返回 True，
+    即保持旧行为不拦。宁可不管，也不要让升级用户莫名其妙"按键没反应"。
+    """
+    try:
+        mtime = HEARTBEAT_FILE.stat().st_mtime
+    except OSError:
+        return True
+    return (time.time() - mtime) <= HOST_GRACE_SEC
+
+
+def _suspend_hotkeys() -> None:
+    """宿主没了就把功能热键交还系统，别占着 Ctrl+Alt+Q/W/T（按了也没 DSH 可用）。
+
+    退出键（Ctrl+Alt+Shift+Q）**故意保留**：待机时用户还得能手动叫停这个进程，
+    否则只能开任务管理器。
+    """
+    for hk in (ID_ASK, ID_SPEAK, ID_TYPE):
+        try:
+            win32gui.UnregisterHotKey(0, hk)
+        except Exception:
+            pass
+
+
+def _reregister_hotkeys() -> None:
+    """宿主回来后重新抢热键。先把 4 个 id 全释放一遍——待机时退出键还握着，
+    直接重注册同一个 id 会被 Win32 判 1409（自己占自己的）。"""
+    for hk in (ID_ASK, ID_SPEAK, ID_EXIT, ID_TYPE):
+        try:
+            win32gui.UnregisterHotKey(0, hk)
+        except Exception:
+            pass
+    _register_oneshot_hotkeys(quiet=True)
+
+
+def host_tick() -> None:
+    """按 HOST_PROBE_SEC 复查宿主，负责三件事：静音待机、重新抢热键、超时自退。"""
+    now = time.monotonic()
+    if now - _host["checked_at"] < HOST_PROBE_SEC:
+        return
+    _host["checked_at"] = now
+    alive = host_alive()
+
+    if alive and not _host["alive"]:
+        # DSH 回来了（多半是重启完成）→ 自动恢复，不用用户再点"启动副驾"
+        try:
+            _reregister_hotkeys()
+        except Exception as e:  # 热键被别的程序占了：保持待机，下轮再试
+            log_event("host_online_hotkey_busy", error=repr(e))
+            return
+        _host["alive"] = True
+        _host["offline_since"] = 0.0
+        log_event("host_online")
+        return
+
+    if not alive and _host["alive"]:
+        _host["alive"] = False
+        _host["offline_since"] = time.time()
+        _suspend_hotkeys()
+        restore_caps_lock()  # 万一是在按住说话的中途 DSH 走了，别把大小写锁住
+        log_event("host_offline", grace=int(HOST_GRACE_SEC))
+        return
+
+    if not alive and _host["offline_since"]:
+        gone = time.time() - _host["offline_since"]
+        if gone >= HOST_EXIT_AFTER_SEC:
+            log_event("host_gone_exit", seconds=int(gone))
+            raise SystemExit(0)
+
+
 def message_loop() -> None:
-    """非阻塞消息泵：PeekMessage 处理一次性热键，其余时间轮询 PTT 按键。"""
+    """非阻塞消息泵：PeekMessage 处理一次性热键，其余时间轮询 PTT 按键。
+
+    宿主（DSH）退出后进入待机：不响按键、把功能热键交还系统，
+    只留退出键；离线超过 HOST_EXIT_AFTER_SEC 直接退出，别长期占内存。
+    """
     ptt_active = False
     ptt_pressed_at = 0.0
 
@@ -774,6 +873,14 @@ def message_loop() -> None:
         while True:
             if not pump_messages():
                 return
+            host_tick()  # 宿主动了状态就切模式；离线太久这里会抛 SystemExit
+            if not _host["alive"]:
+                # 待机：按 CapsLock 不再"滴"，等宿主回来（DSH 重启一般 1 分钟内）
+                if ptt_active:
+                    ptt_active = False
+                    ptt_pressed_at = 0.0
+                time.sleep(0.2)
+                continue
             ptt_active, ptt_pressed_at = pump_ptt(ptt_active, ptt_pressed_at)
             time.sleep(0.04)
     finally:

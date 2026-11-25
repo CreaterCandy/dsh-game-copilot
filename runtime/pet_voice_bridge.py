@@ -54,6 +54,15 @@ LOG = ROOT / "pet_bridge_log.jsonl"
 POLL_SEC = 1.0
 RECHECK_PORT_SEC = 30
 
+# ---- 宿主（DSH）心跳 ----
+# 本桥也是插件 detached 拉起的（DSH 重启后不用重新点启动）。DSH 一走它只会
+# 一直空转重试端口，白占内存、还让用户以为"桌宠还在后台活着"。
+# 靠插件每 5 秒刷新的心跳文件判断，读不到文件就当宿主还在（兼容老版本插件）。
+_HEARTBEAT_FILE = Path(os.environ.get("DSH_HOME") or (Path.home() / ".dsh")) / "dsh-game-copilot-heartbeat.json"
+HOST_GRACE_SEC = 16.0        # 心跳超过这么久没更新 = DSH 已退出
+HOST_EXIT_AFTER_SEC = 300.0  # 离线持续这么久就退出，不留孤儿进程
+_offline_since = 0.0
+
 
 def log(msg: str, **kw) -> None:
     import json
@@ -199,6 +208,35 @@ def discover_port() -> int | None:
     return None
 
 
+def host_alive() -> bool:
+    """DSH 是否还活着：看插件写的 5 秒心跳。读不到文件 → 当它还在（不拦）。"""
+    try:
+        return (time.time() - _HEARTBEAT_FILE.stat().st_mtime) <= HOST_GRACE_SEC
+    except OSError:
+        return True
+
+
+def host_gone_tick() -> bool:
+    """读不到 /state 时调用；宿主彻底走了且超过容忍时间就返回 True（该退出了）。
+
+    为什么不是"一失联就退"：DSH 重启要几十秒，重启完插件端口一换，
+    这里 discover_port 能自己找回来。留 5 分钟窗口，重启期间桥不用重起。
+    """
+    global _offline_since
+    if host_alive():
+        _offline_since = 0.0
+        return False
+    if not _offline_since:
+        _offline_since = time.time()
+        log("DSH 已退出，播报桥进入待机", grace=int(HOST_GRACE_SEC))
+        return False
+    gone = time.time() - _offline_since
+    if gone >= HOST_EXIT_AFTER_SEC:
+        log("DSH 退出已久，播报桥退出", seconds=int(gone))
+        return True
+    return False
+
+
 def read_state(port: int) -> dict | None:
     import json
     import urllib.request
@@ -240,6 +278,7 @@ def play_wav(path: str) -> None:
 
 
 def main() -> int:
+    global _offline_since
     ap = argparse.ArgumentParser(description="game-pet 建议 → TTS 播报桥接")
     ap.add_argument("--once", action="store_true", help="只检查一次，打印当前建议")
     ap.add_argument("--dry-run", action="store_true", help="只打印会念什么，不合成播放")
@@ -281,6 +320,8 @@ def main() -> int:
                 log("端口失联，重新发现")
                 new = discover_port()
                 if new is None:
+                    if host_gone_tick():
+                        return 0
                     time.sleep(POLL_SEC)
                     continue
                 port = new
@@ -288,8 +329,11 @@ def main() -> int:
 
         st = read_state(port)
         if not st:
+            if host_gone_tick():
+                return 0
             time.sleep(POLL_SEC)
             continue
+        _offline_since = 0.0
         sec = st.get("sections", {})
         pres = sec.get("presence", {}).get("data", {})
         adv = sec.get("advice", {})

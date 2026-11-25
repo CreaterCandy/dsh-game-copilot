@@ -6,7 +6,15 @@
 //     → 到点就：截屏 → 交给模型看图 → 拿回一句台词
 //     → 写进 /state，浏览器里的桌宠自己念出来
 //   切走游戏 / 关掉开关 → 立刻停手（不再截屏、不再调模型）
-import { createReadStream, existsSync, openSync, readdirSync, readFileSync } from 'node:fs';
+import {
+  createReadStream,
+  existsSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { execFileSync, spawn } from 'node:child_process';
 import { homedir } from 'node:os';
@@ -135,6 +143,44 @@ const OVERLAY_HTML = path.join(PACKAGE_ROOT, 'runtime', 'overlay', 'overlay.html
 const POSITION_FILE = path.join(process.env.DSH_HOME || path.join(homedir(), '.dsh'), 'dsh-game-copilot-window.json');
 
 /**
+ * 宿主心跳文件：让 detached 拉起的按键守护知道"DSH 还在不在"。
+ *
+ * 为什么需要（用户反馈：退出 DSH 后按 CapsLock 还会"滴"一声）：
+ *   `/runtime/start` 故意用 detached 拉起守护（DSH 重启后能接着用，不用重新点启动），
+ *   代价是 DSH 正常退出时守护收不到任何信号，会继续轮询按键——按一下 CapsLock
+ *   就 play_cue("start") 滴一声，然后转写失败，没结果。
+ *   让守护自己查进程？tasklist 实测 164ms，1 秒一次太贵（游戏里周期性掉帧）。
+ *   改成这里每 5 秒写一个几十字节的心跳文件，守护只 stat 一次（~0.01ms）。
+ *   插件卸载时立刻删文件，守护下一轮（≤1s）就判定宿主已走并静音，不用等过期。
+ */
+const HEARTBEAT_FILE = path.join(
+  process.env.DSH_HOME || path.join(homedir(), '.dsh'),
+  'dsh-game-copilot-heartbeat.json',
+);
+
+/** 起心跳；返回停止函数（停止时顺手删文件，让守护立刻知道宿主没了）。 */
+function startHostHeartbeat() {
+  const beat = () => {
+    try {
+      writeFileSync(HEARTBEAT_FILE, JSON.stringify({ pid: process.pid, at: Date.now() }), 'utf8');
+    } catch {
+      // 目录被删/没权限都不该影响主流程：守护只会退化成"按旧行为不拦"
+    }
+  };
+  beat();
+  const timer = setInterval(beat, 5000);
+  timer.unref?.(); // 别让心跳把进程吊着不退出
+  return () => {
+    clearInterval(timer);
+    try {
+      rmSync(HEARTBEAT_FILE, { force: true });
+    } catch {
+      // 已经没了就算了
+    }
+  };
+}
+
+/**
  * 自带动画清单（只算一次）。
  * 为什么要暴露给小窗：小窗要按"本地到底有哪些素材"来排回落链——
  * 本地没有的动画就别去试它（否则要等 404/超时才回落，观感是"卡一下才出小人"）。
@@ -199,6 +245,13 @@ export function apply(ctx, config) {
   }
 
   publish();
+
+  // 宿主心跳：按键守护靠它判断 DSH 是否还活着（见 HEARTBEAT_FILE 注释）。
+  // 挂在 ctx.effect 上，DSH 退出/插件卸载时会删文件 → 守护 1 秒内静音。
+  ctx.effect(() => {
+    const stop = startHostHeartbeat();
+    return () => stop();
+  }, 'dsh-game-copilot: host heartbeat');
 
   /** 检测节拍器：间隔可热改，所以留一个可重建的句柄（重建时先清旧的）。 */
   let checkTimer = null;
