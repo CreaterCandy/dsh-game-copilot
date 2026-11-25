@@ -28,7 +28,7 @@ param(
     [string]$OutDir = (Join-Path $PSScriptRoot '..\dist'),
     # 指定一份 Electron 发行包目录（里面要有 electron.exe），不指定就自动找
     [string]$ElectronDir = '',
-    # 出轻量包（不带 Electron，体积小约 255MB，但小窗起不来）
+    # 出轻量包（不带 Electron，下载小约 105MB，但小窗起不来）
     [switch]$NoElectron
 )
 
@@ -77,7 +77,7 @@ if (-not $NoElectron) {
   三种办法：
     1) -ElectronDir 指向一份现成的发行包目录；
     2) 先 npm i electron@30.5.1 到 ..\electron-dist，再重跑；
-    3) 加 -NoElectron 出轻量包（体积小 255MB，但用户的小窗起不来）。
+    3) 加 -NoElectron 出轻量包（下载小约 105MB，但用户的小窗起不来）。
 "@
     }
     $electronVer = Get-Content -LiteralPath (Join-Path $electronSrc 'version') -ErrorAction SilentlyContinue
@@ -131,7 +131,7 @@ try {
         Write-Host '按 -NoElectron 出轻量包：不含 Electron，用户的小窗不会启动。' -ForegroundColor Yellow
     }
 
-    Write-Host '正在压缩完整包（请稍候，约 700MB）…' -ForegroundColor Cyan
+    Write-Host '正在压缩完整包（请稍候，解压后约 720MB）…' -ForegroundColor Cyan
     Compress-Archive -LiteralPath $appDir -DestinationPath $zip -CompressionLevel Optimal
 } finally {
     # 清临时目录失败不能拖垮整个流程：某些安全策略会对"一次删除 N 个文件"

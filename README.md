@@ -39,7 +39,7 @@
 
 **1. 下载完整包并安装**（推荐）
 
-到 [Releases](https://github.com/CreaterCandy/dsh-game-copilot/releases) 下载最新的 `dsh-game-copilot-<版本>-full.zip`（约 560MB，已含语音识别模型 + 桌宠小窗运行时），解压得到 `dsh-game-copilot` 文件夹，在其中打开 PowerShell 运行：
+到 [Releases](https://github.com/CreaterCandy/dsh-game-copilot/releases) 下载最新的 `dsh-game-copilot-<版本>-full.zip`（约 540MB，已含语音识别模型 + 桌宠小窗运行时），解压得到 `dsh-game-copilot` 文件夹，在其中打开 PowerShell 运行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
