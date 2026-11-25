@@ -25,7 +25,7 @@ export async function detectForeground({ timeoutMs = 10000 } = {}) {
   if (process.platform !== 'win32') {
     return { available: false, error: `unsupported platform: ${process.platform}` };
   }
-  const scratch = await mkdtemp(path.join(tmpdir(), 'dsh-game-pet-'));
+  const scratch = await mkdtemp(path.join(tmpdir(), 'dsh-game-copilot-'));
   const target = path.join(scratch, 'window.json');
   try {
     // 走文件而不是 stdout：Windows PowerShell 5.1 的控制台编码会把中文标题写坏，
@@ -51,7 +51,7 @@ export async function detectForeground({ timeoutMs = 10000 } = {}) {
  */
 export async function capturePng({ hwnd = 0, monitor = 'all', timeoutMs = 25000 } = {}) {
   if (process.platform !== 'win32') throw new Error(`unsupported platform: ${process.platform}`);
-  const scratch = await mkdtemp(path.join(tmpdir(), 'dsh-game-pet-'));
+  const scratch = await mkdtemp(path.join(tmpdir(), 'dsh-game-copilot-'));
   const target = path.join(scratch, 'shot.png');
   try {
     await runHelper(

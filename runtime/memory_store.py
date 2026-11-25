@@ -38,29 +38,36 @@ MEM_DIR = ROOT / "memory"
 INDEX_FILE = MEM_DIR / "index.md"
 
 # ---- DSH 插件配置（设置页改的那份）----
-# 记忆模式、TTS 参数这些都搬进了 DSH 设置页（落盘 %DSH_HOME%\dsh-game-pet.json）。
+# 记忆模式、TTS 参数这些都搬进了 DSH 设置页（落盘 %DSH_HOME%\dsh-game-copilot.json）。
 # 读它要按 mtime 缓存：每次按键都 stat 一次只要 0.1ms，但重复 json.loads 没必要。
-PLUGIN_CFG_PATH = Path(os.environ.get("DSH_HOME") or (Path.home() / ".dsh")) / "dsh-game-pet.json"
-_PLUGIN_CACHE: dict = {"mtime": None, "data": {}}
+_DSH_HOME = Path(os.environ.get("DSH_HOME") or (Path.home() / ".dsh"))
+PLUGIN_CFG_PATH = _DSH_HOME / "dsh-game-copilot.json"
+# 兼容早期版本：改名前的配置还在旧文件里，新文件不存在时继续读它，不丢用户设置。
+LEGACY_PLUGIN_CFG_PATH = _DSH_HOME / "dsh-game-pet.json"
+_PLUGIN_CACHE: dict = {"path": None, "mtime": None, "data": {}}
+
+
+def _active_plugin_cfg_path() -> Path:
+    return PLUGIN_CFG_PATH if (PLUGIN_CFG_PATH.exists() or not LEGACY_PLUGIN_CFG_PATH.exists()) else LEGACY_PLUGIN_CFG_PATH
 
 
 def plugin_config() -> dict:
     """读插件配置；文件没变就用缓存。读不到就当空（全部走本地 config.json）。"""
+    cfg_path = _active_plugin_cfg_path()
     try:
-        mtime = PLUGIN_CFG_PATH.stat().st_mtime
+        mtime = cfg_path.stat().st_mtime
     except OSError:
-        _PLUGIN_CACHE["mtime"] = None
-        _PLUGIN_CACHE["data"] = {}
+        _PLUGIN_CACHE.update(path=None, mtime=None, data={})
         return {}
-    if _PLUGIN_CACHE["mtime"] != mtime:
+    if _PLUGIN_CACHE["path"] != str(cfg_path) or _PLUGIN_CACHE["mtime"] != mtime:
         try:
-            raw = PLUGIN_CFG_PATH.read_text(encoding="utf-8").lstrip("\ufeff")
+            raw = cfg_path.read_text(encoding="utf-8").lstrip("\ufeff")
             data = json.loads(raw)
             _PLUGIN_CACHE["data"] = data if isinstance(data, dict) else {}
         except Exception as e:
-            print(f"[插件配置] 读不了 {PLUGIN_CFG_PATH}：{e!r}", file=sys.stderr)
+            print(f"[插件配置] 读不了 {cfg_path}：{e!r}", file=sys.stderr)
             _PLUGIN_CACHE["data"] = {}
-        _PLUGIN_CACHE["mtime"] = mtime
+        _PLUGIN_CACHE.update(path=str(cfg_path), mtime=mtime)
     return _PLUGIN_CACHE["data"]
 
 

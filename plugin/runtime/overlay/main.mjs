@@ -54,7 +54,7 @@ trace(`boot pid=${process.pid} url=${url} size=${width}x${height} at=${wantX},${
 
 if (!url) {
   trace('GP_OVERLAY_URL missing, exiting');
-  console.error('dsh-game-pet overlay: GP_OVERLAY_URL is required');
+  console.error('dsh-game-copilot overlay: GP_OVERLAY_URL is required');
   app.exit(2);
 }
 

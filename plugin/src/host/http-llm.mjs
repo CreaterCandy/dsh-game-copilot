@@ -6,7 +6,7 @@
 //   2. runProbe() —— 随机 4 位数字小图，判断这个端点到底能不能看图；
 //   3. 统一 re-export 脱敏/检测函数，设置页只认这一个文件。
 //
-// 探针图纯 Node 标准库生成（zlib + 手写 CRC32），不 spawn Python——克隆版
+// 探针图纯 Node 标准库生成（zlib + 手写 CRC32），不 spawn Python——
 // 即使只装了 DSH 插件、还没建 venv，也能探。runtime/probe_digits.py 是同一套
 // 规则的命令行版，供自检用；两边都是 5x7 点阵、64x64、4 位数字。
 

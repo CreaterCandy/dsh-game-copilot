@@ -48,7 +48,7 @@ export function startOverlayWindow(options) {
     return { stop: () => {}, running: () => false };
   }
 
-  const base = `http://${host}:${port}/dsh-game-pet-7341`;
+  const base = `http://${host}:${port}/dsh-game-copilot-7341`;
   const env = {
     ...process.env,
     GP_OVERLAY_URL: `${base}/overlay`,
@@ -56,7 +56,7 @@ export function startOverlayWindow(options) {
     GP_PING_URL: `${base}/ping`,
     GP_WIDTH: String(width),
     GP_HEIGHT: String(height),
-    GP_LOG_FILE: path.join(process.env.DSH_HOME || process.env.TEMP || '.', 'dsh-game-pet-window.log'),
+    GP_LOG_FILE: path.join(process.env.DSH_HOME || process.env.TEMP || '.', 'dsh-game-copilot-window.log'),
   };
   if (x !== null && x !== undefined) env.GP_X = String(x);
   if (y !== null && y !== undefined) env.GP_Y = String(y);

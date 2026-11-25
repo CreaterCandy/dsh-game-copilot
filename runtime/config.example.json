@@ -1,5 +1,5 @@
 {
-  "_说明": "Python 侧运行参数样例。复制为 config.json 后按需修改。模型/端点/热键/桌宠显示统一在 DSH 设置页里配，落在 %DSH_HOME%\\dsh-game-pet.json；这份只管录音、音效、ASR、日志。",
+  "_说明": "Python 侧运行参数样例。复制为 config.json 后按需修改。模型/端点/热键/桌宠显示统一在 DSH 设置页里配，落在 %DSH_HOME%\\dsh-game-copilot.json；这份只管录音、音效、ASR、日志。",
   "_可用按键": {
     "oem_3": "反引号 ` ~",
     "capslock": "Caps Lock（默认 PTT）",

@@ -61,7 +61,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Step '5/5 装插件 + 写设置页默认配置'
 $homeDir = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
-$profile = Join-Path $homeDir 'profiles\desktop\node_modules\dsh-game-pet'
+$profile = Join-Path $homeDir 'profiles\desktop\node_modules\dsh-game-copilot'
 if (-not (Test-Path (Split-Path $profile -Parent))) {
     Write-Host "没找到 DSH profile 目录：$profile" -ForegroundColor Yellow
     Write-Host '请先安装并至少启动一次 DeepSeek Harness，然后重跑本脚本。' -ForegroundColor Yellow
@@ -69,15 +69,25 @@ if (-not (Test-Path (Split-Path $profile -Parent))) {
     Copy-Item (Join-Path $root 'plugin') $profile -Recurse -Force
     Write-Host "插件已装到 $profile" -ForegroundColor Green
 }
-$petCfg = Join-Path $homeDir 'dsh-game-pet.json'
+$petCfg = Join-Path $homeDir 'dsh-game-copilot.json'
+$legacyPetCfg = Join-Path $homeDir 'dsh-game-pet.json'
+if (-not (Test-Path $petCfg) -and (Test-Path $legacyPetCfg)) {
+    Copy-Item $legacyPetCfg $petCfg
+    Write-Host "已从旧配置迁移：$legacyPetCfg -> $petCfg" -ForegroundColor Green
+}
 if (-not (Test-Path $petCfg)) {
-    Copy-Item (Join-Path $root 'config\dsh-game-pet.example.json') $petCfg
+    Copy-Item (Join-Path $root 'config\dsh-game-copilot.example.json') $petCfg
     Write-Host "已生成 $petCfg" -ForegroundColor Green
 } else { Write-Host "已存在，跳过：$petCfg" -ForegroundColor DarkGray }
+
+$legacyProfile = Join-Path $homeDir 'profiles\desktop\node_modules\dsh-game-pet'
+if (Test-Path $legacyProfile) {
+    Write-Host '检测到旧插件目录 dsh-game-pet：请把 profile 的 cordis.patch.yml 挂载行改成 dsh-game-copilot 后重启 DSH；旧目录可自行备份后删除。' -ForegroundColor Yellow
+}
 
 Write-Step '完成'
 Write-Host '下一步：' -ForegroundColor Green
 Write-Host '  1) 启动 DSH，在设置页打开「桌宠参谋 → 模型与能力」，填一个 OpenAI 兼容端点'
 Write-Host '  2) 点「测一下」，让插件判断这个端点能不能看图'
 Write-Host '  3) 点顶部「启动副驾」，之后按住 Caps Lock 说话即可'
-Write-Host '  设置页也可以直接浏览器打开：http://127.0.0.1:<DSH端口>/dsh-game-pet-7341/settings'
+Write-Host '  设置页也可以直接浏览器打开：http://127.0.0.1:<DSH端口>/dsh-game-copilot-7341/settings'

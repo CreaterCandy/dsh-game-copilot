@@ -1,4 +1,4 @@
-# dsh-game-pet 插件
+# dsh-game-copilot 插件
 
 本目录是项目的 DSH / Cordis 插件本体，符合标准 `name / inject / apply` 约定。它提供 HTTP 路由、模型能力路由、设置页后端，并管理透明桌宠小窗进程。
 
@@ -7,7 +7,7 @@
 普通用户请直接用仓库根目录的 `setup.ps1`，它会把整个 `plugin/` 目录复制到：
 
 ```
-%DSH_HOME%\profiles\desktop\node_modules\dsh-game-pet
+%DSH_HOME%\profiles\desktop\node_modules\dsh-game-copilot
 ```
 
 已存在的配置不会被覆盖。开发调试时可以手动复制，然后重启 DSH 让插件重新加载。
@@ -26,7 +26,7 @@
 
 ## 配置
 
-设置页改的是 `%DSH_HOME%\dsh-game-pet.json`，字段说明在仓库根目录 `README.md` 与 `docs/设计说明.md`。插件不保存 API Key 到仓库，密钥只在本机配置文件里。
+设置页改的是 `%DSH_HOME%\dsh-game-copilot.json`，字段说明在仓库根目录 `README.md` 与 `docs/设计说明.md`。插件不保存 API Key 到仓库，密钥只在本机配置文件里。
 
 ## 素材与许可
 

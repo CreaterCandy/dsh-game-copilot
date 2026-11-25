@@ -1,5 +1,5 @@
 {
-  "_说明": "克隆版默认配置。setup.ps1 会在 %DSH_HOME%\\dsh-game-pet.json 不存在时复制过去；已经存在就不动。设置页改的也是这一份。",
+  "_说明": "默认配置。setup.ps1 会在 %DSH_HOME%\\dsh-game-copilot.json 不存在时复制过去；已经存在就不动。设置页改的也是这一份。",
   "enabled": true,
   "askEnabled": true,
   "askBackend": "http",

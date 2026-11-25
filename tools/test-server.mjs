@@ -1,5 +1,5 @@
 /**
- * 克隆版本地测试服务器（零依赖，纯 node:http）
+ * 本地测试服务器（零依赖，纯 node:http）
  *
  * 用途：不装 DSH，就能在浏览器里测 settings.html 的完整交互。
  * 真实现的部分：配置读写、识图探针（填真端点就真发请求）、TTS 离线音色探测、TTS 试听。
@@ -8,7 +8,7 @@
  * 用法：
  *   node tools/test-server.mjs
  *   浏览器打开 http://127.0.0.1:7342/
- *   Ctrl+C 退出。配置写在 config/dsh-game-pet.json，只属于克隆版。
+ *   Ctrl+C 退出。配置写在 config/dsh-game-copilot.json，与 DSH 安装互不影响。
  */
 import http from 'node:http';
 import fs from 'node:fs';
@@ -33,10 +33,10 @@ import { runProbe } from '../plugin/src/host/http-llm.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const HTML = path.join(ROOT, 'settings.html');
-const CONFIG = path.join(ROOT, 'config', 'dsh-game-pet.json');
+const CONFIG = path.join(ROOT, 'config', 'dsh-game-copilot.json');
 const TTS_DIR = path.join(ROOT, 'runtime', 'tts');
 const PORT = Number(process.env.GAMEPET_TEST_PORT || 7342);
-const PREFIX = '/dsh-game-pet-7341';
+const PREFIX = '/dsh-game-copilot-7341';
 
 function readUserConfig() {
   try {
@@ -263,8 +263,8 @@ async function handleApi(req, res, route) {
     const sources = {
       copilot: { label: '主对话日志', file: path.join(ROOT, 'runtime', 'copilot_log.jsonl'), jsonl: true },
       bridge: { label: '播报桥日志', file: path.join(ROOT, 'runtime', 'pet_bridge_log.jsonl'), jsonl: true },
-      runtime: { label: '按键守护输出', file: path.join(home, 'dsh-game-pet-runtime.log'), gbk: true },
-      bridgeout: { label: '播报桥输出', file: path.join(home, 'dsh-game-pet-bridge.log'), gbk: true },
+      runtime: { label: '按键守护输出', file: path.join(home, 'dsh-game-copilot-runtime.log'), gbk: true },
+      bridgeout: { label: '播报桥输出', file: path.join(home, 'dsh-game-copilot-bridge.log'), gbk: true },
     };
     const key = query.get('source') || 'copilot';
     const src = sources[key];
@@ -326,7 +326,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`克隆版测试服务器已启动：http://127.0.0.1:${PORT}/`);
+  console.log(`测试服务器已启动：http://127.0.0.1:${PORT}/`);
   console.log(`配置文件：${CONFIG}`);
   console.log('Ctrl+C 退出。一键启动为模拟接口，其余探测为真实现。');
 });

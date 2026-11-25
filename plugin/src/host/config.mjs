@@ -41,7 +41,7 @@ export const DEFAULTS = {
   visionModel: '',
   /** 自己填一个视觉模型 API（OpenAI / Anthropic 兼容）当识图后端。
    *  填了且 enabled 就**排在最前面**用，探测不到注册表模型时这是唯一的出路。
-   *  apiKey 以明文存在 $DSH_HOME/dsh-game-pet.json（本机文件），界面只回"有没有"。 */
+   *  apiKey 以明文存在 $DSH_HOME/dsh-game-copilot.json（本机文件），界面只回"有没有"。 */
   visionApi: {
     enabled: false,
     baseURL: '',
@@ -82,7 +82,7 @@ export const DEFAULTS = {
    *  限流时识图失败会导致模型误答"看不到画面"——所以优先一步式。 */
   askOneShot: true,
 
-  // ── 模型接入槽位（克隆版的核心：本地 / 云端一个填法）────────────────
+  // ── 模型接入槽位（本项目核心：本地 / 云端一个填法）────────────────
   /** 作答后端：'http' = 任意 OpenAI/Anthropic 兼容端点；'dsh' = DSH 会话模型（高级折叠，可选） */
   askBackend: 'http',
   /** 作答槽。和 visionApi 分开：可以"便宜文本模型作答 + 本地识图模型看图" */
@@ -136,7 +136,7 @@ export const DEFAULTS = {
   bubbleMaxWidth: 300,
 
   // ── 语音播报（真正干活的在 runtime/tts/tts_interface.py）────────────
-  // 这一组只存配置：ptt_voice 每次合成前读 %DSH_HOME%\dsh-game-pet.json 的 tts 段，
+  // 这一组只存配置：ptt_voice 每次合成前读 %DSH_HOME%\dsh-game-copilot.json 的 tts 段，
   // 所以这里改完**下一句话就生效**，不用重启播报进程。
   tts: {
     /** 关掉 = 只显示气泡不出声 */
@@ -160,7 +160,7 @@ export const DEFAULTS = {
  * 设置页「语音引擎」下拉的数据源。
  * auto = 交给 tts/config.json 的 auto_order 降级链（推荐）。
  */
-// 克隆版三档：Edge 在线 / Windows 系统语音 / 本地自然人声（可选）。
+// 本项目三档：Edge 在线 / Windows 系统语音 / 本地自然人声（可选）。
 // 第三档不预置、不默认、不随包分发：微软自然人声有第三方许可，只能用户自己装；
 // 设置页会先调 /tts/probe，只有探测到真离线音色才提示「本机可用」（§13.17）。
 export const TTS_BACKEND_PRESETS = {

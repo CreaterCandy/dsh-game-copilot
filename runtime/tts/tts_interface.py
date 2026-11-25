@@ -667,7 +667,7 @@ class TTSRouter:
 
         为什么要有这个：`get_tts()` 是全局单例、配置只在启动时读一次，
         所以以前改 tts/config.json 必须重启播报进程。现在设置页把值写在
-        `%DSH_HOME%\\dsh-game-pet.json` 的 tts 段，ptt_voice 每次合成前调这个方法，
+        `%DSH_HOME%\\dsh-game-copilot.json` 的 tts 段，ptt_voice 每次合成前调这个方法，
         改完下一句话就生效。
 
         voice 写 SAPI token 名（Xiaoyi / 晓伊 / Yunxi…），edge 那边的完整名

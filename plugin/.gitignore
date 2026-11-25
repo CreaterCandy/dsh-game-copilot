@@ -1,8 +1,8 @@
 # 本机运行期文件（插件自己写的、不属于源码）
-dsh-game-pet.json
-dsh-game-pet.log
-dsh-game-pet-window.json
-dsh-game-pet-window.log
+dsh-game-copilot.json
+dsh-game-copilot.log
+dsh-game-copilot-window.json
+dsh-game-copilot-window.log
 
 # 依赖与构建产物
 node_modules/

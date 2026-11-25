@@ -11,19 +11,19 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { apply } from './src/host/plugin.mjs';
 
-export const name = 'dsh-game-pet';
+export const name = 'dsh-game-copilot';
 
 /** 需要的服务：webServer 起路由；llm 调模型；agentDefaultModel 拿"当前对话用的模型"当默认。
  *  attachments 是可选服务（ctx.get('attachments', false)），缺了也能跑（退化成纯文本）。 */
 export const inject = ['webServer', 'llm', 'agentDefaultModel'];
 
 /** 加载留痕：插件出问题时"到底有没有被加载"最难判断，所以直接写一行日志。
- *  位置：$DSH_HOME/dsh-game-pet.log（DSH_HOME 缺失时退到 ~/.dsh）。 */
+ *  位置：$DSH_HOME/dsh-game-copilot.log（DSH_HOME 缺失时退到 ~/.dsh）。 */
 function trace(line) {
   try {
     const home = process.env.DSH_HOME || path.join(homedir(), '.dsh');
     mkdirSync(home, { recursive: true });
-    appendFileSync(path.join(home, 'dsh-game-pet.log'), `[${new Date().toISOString()}] ${line}\n`, 'utf8');
+    appendFileSync(path.join(home, 'dsh-game-copilot.log'), `[${new Date().toISOString()}] ${line}\n`, 'utf8');
   } catch {
     // 日志失败不能影响插件本身
   }

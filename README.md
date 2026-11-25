@@ -1,4 +1,4 @@
-# 游戏副驾 · DSH 插件版
+# dsh-game-copilot · 游戏副驾 DSH 插件
 
 打游戏时按住一个键说话，它看一眼当前画面，把建议显示在桌宠气泡里，同时念出来。不方便说话就按热键打字问。
 
@@ -30,8 +30,8 @@
 **1. 取代码并安装**
 
 ```bash
-git clone https://github.com/<你的账号>/dsh-game-pet.git
-cd dsh-game-pet
+git clone https://github.com/<你的账号>/dsh-game-copilot.git
+cd dsh-game-copilot
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
@@ -44,7 +44,7 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 启动 DSH，浏览器打开：
 
 ```
-http://127.0.0.1:<DSH端口>/dsh-game-pet-7341/settings
+http://127.0.0.1:<DSH端口>/dsh-game-copilot-7341/settings
 ```
 
 在「模型与能力」填端点、模型名、API Key（本地服务一般留空），保持「自动判断」，点「测一下」。答对随机数字图即启用一步式看图；答错会自动降级。右上角保存后立即生效。
@@ -68,10 +68,12 @@ http://127.0.0.1:<DSH端口>/dsh-game-pet-7341/settings
 
 | 文件 | 管什么 |
 |---|---|
-| `%DSH_HOME%\dsh-game-pet.json` | 模型端点、能力、热键、桌宠显示、TTS、记忆——设置页改的就是它 |
+| `%DSH_HOME%\dsh-game-copilot.json` | 模型端点、能力、热键、桌宠显示、TTS、记忆——设置页改的就是它 |
 | `runtime\config.json` | 录音设备、音效路径、ASR 下载位置——装好后基本不用动 |
 
 Python 侧读前者带 mtime 缓存，所以设置页改完下一句话就生效，不用重启守护。
+
+如果你以前用过旧名 `dsh-game-pet`：安装脚本会先把旧的 `%DSH_HOME%\dsh-game-pet.json` 复制成新配置，插件与 Python 侧在新文件不存在时也会兼容读取旧文件；但要让 DSH 加载新插件，仍需把 profile 的 `cordis.patch.yml` 挂载行改成新名字（见 `plugin/cordis.patch.yml` 的说明）。
 
 ## 架构一览
 

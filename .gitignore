@@ -5,6 +5,8 @@ runtime/shots/
 runtime/out/
 runtime/*_log.jsonl
 runtime/*.log
+config/dsh-game-copilot.json
+# 旧名配置只作迁移来源，同样不要提交
 config/dsh-game-pet.json
 
 # 环境与下载物（体积大 / 机器相关）

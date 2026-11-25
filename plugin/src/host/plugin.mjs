@@ -39,7 +39,7 @@ import { resolveAskRoute } from './ask-route.mjs';
 import { CompanionState } from './state.mjs';
 import { moodOf, pickAnimation } from '../shared/agent.mjs';
 
-export const ROUTE_PREFIX = '/dsh-game-pet-7341';
+export const ROUTE_PREFIX = '/dsh-game-copilot-7341';
 
 /** 一键启动拉起的 Python 副驾进程（detached，插件退出也不跟着死）。 */
 let runtimeChild = null;
@@ -100,8 +100,8 @@ function logSources() {
   return {
     copilot: { label: '主对话日志', file: path.join(COPILOT_ROOT, 'copilot_log.jsonl'), jsonl: true },
     bridge: { label: '播报桥日志', file: path.join(COPILOT_ROOT, 'pet_bridge_log.jsonl'), jsonl: true },
-    runtime: { label: '按键守护输出', file: path.join(home, 'dsh-game-pet-runtime.log'), gbk: true },
-    bridgeout: { label: '播报桥输出', file: path.join(home, 'dsh-game-pet-bridge.log'), gbk: true },
+    runtime: { label: '按键守护输出', file: path.join(home, 'dsh-game-copilot-runtime.log'), gbk: true },
+    bridgeout: { label: '播报桥输出', file: path.join(home, 'dsh-game-copilot-bridge.log'), gbk: true },
   };
 }
 
@@ -132,7 +132,7 @@ const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 const ANIMATION_DIR = path.join(PACKAGE_ROOT, 'assets', 'webm');
 const OVERLAY_HTML = path.join(PACKAGE_ROOT, 'runtime', 'overlay', 'overlay.html');
 /** 窗口位置单独存一份（用户拖过就该记住，不该改写 profile 的 patch） */
-const POSITION_FILE = path.join(process.env.DSH_HOME || path.join(homedir(), '.dsh'), 'dsh-game-pet-window.json');
+const POSITION_FILE = path.join(process.env.DSH_HOME || path.join(homedir(), '.dsh'), 'dsh-game-copilot-window.json');
 
 /**
  * 自带动画清单（只算一次）。
@@ -166,7 +166,7 @@ export function apply(ctx, config) {
   const log = (level, message) => {
     const logger = ctx.logger ?? console;
     const fn = typeof logger[level] === 'function' ? logger[level].bind(logger) : null;
-    if (fn) fn(`dsh-game-pet: ${message}`);
+    if (fn) fn(`dsh-game-copilot: ${message}`);
   };
 
   /** 一次游戏会话的运行态 */
@@ -215,7 +215,7 @@ export function apply(ctx, config) {
       if (session.timer) clearTimeout(session.timer);
       session.timer = null;
     },
-    'dsh-game-pet: automation loop',
+    'dsh-game-copilot: automation loop',
   );
 
   ctx.effect(
@@ -232,7 +232,7 @@ export function apply(ctx, config) {
           }
         },
       }),
-    'dsh-game-pet: /dsh-game-pet-7341 routes',
+    'dsh-game-copilot: /dsh-game-copilot-7341 routes',
   );
 
   // 置顶小窗：等 webServer 拿到端口后拉起（没有 Electron 就只告警，浏览器浮层照常）
@@ -266,7 +266,7 @@ export function apply(ctx, config) {
       cancelled = true;
       overlay?.stop();
     };
-  }, 'dsh-game-pet: desktop overlay window');
+  }, 'dsh-game-copilot: desktop overlay window');
 
   /**
    * 查询 DSH 会话里连接的模型服务状态（若对应插件提供 usage 接口）。
@@ -576,7 +576,7 @@ export function apply(ctx, config) {
       }
       const before = runtimeProcesses(true);
       try {
-        const logFile = path.join(process.env.DSH_HOME || homedir(), 'dsh-game-pet-runtime.log');
+        const logFile = path.join(process.env.DSH_HOME || homedir(), 'dsh-game-copilot-runtime.log');
         const spawnDetached = (target, logName) => {
           const fd = openSync(logName, 'a');
           const child = spawn(python, [target], {
@@ -597,7 +597,7 @@ export function apply(ctx, config) {
         // 用户分不清是没启动还是自动开口关着——两个都起来，状态一眼可见。
         let bridgeStarted = false;
         if (existsSync(bridge) && !before.bridge) {
-          spawnDetached(bridge, path.join(process.env.DSH_HOME || homedir(), 'dsh-game-pet-bridge.log'));
+          spawnDetached(bridge, path.join(process.env.DSH_HOME || homedir(), 'dsh-game-copilot-bridge.log'));
           bridgeStarted = true;
         }
         // ★ 关键：spawn 成功 ≠ 跑起来。等一下真查进程，崩了就把日志尾巴给用户。
@@ -1246,7 +1246,7 @@ async function sendOverlayHtml(res) {
     res.end(html);
   } catch (error) {
     res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end(`dsh-game-pet: overlay.html 读不到（${errorText(error)}）`);
+    res.end(`dsh-game-copilot: overlay.html 读不到（${errorText(error)}）`);
   }
 }
 
@@ -1273,7 +1273,7 @@ async function sendAnimation(res, name) {
     createReadStream(file).pipe(res);
   } catch {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('dsh-game-pet: no bundled animation');
+    res.end('dsh-game-copilot: no bundled animation');
   }
 }
 

@@ -4,19 +4,20 @@
 // 而且用户手写的注释会被覆盖）。设置页的改动进这里，启动时读回来叠在行配置之上：
 //   patch 行 config（基础） ← config.json（用户覆盖）
 // 这样"设置页改的"和"手写 patch 改的"各归各位，互不破坏。
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 
 const HOME = process.env.DSH_HOME || path.join(homedir(), '.dsh');
-const CONFIG_FILE = path.join(HOME, 'dsh-game-pet.json');
+const CONFIG_FILE = path.join(HOME, 'dsh-game-copilot.json');
+// 兼容早期版本：改名前的配置在旧文件里，新文件不存在时继续读它，不丢用户设置。
+const LEGACY_CONFIG_FILE = path.join(HOME, 'dsh-game-pet.json');
 
-/** 读用户覆盖（没有/坏了都返回空对象，绝不抛）。 */
-export function readUserConfig() {
+function readJsonFile(file) {
   try {
     // 去掉 BOM：用户可能用记事本/PowerShell 编辑过这个文件，
     // 带 BOM 的 JSON.parse 会直接抛（踩过：PowerShell 的 utf8 编码会加 BOM）。
-    const raw = readFileSync(CONFIG_FILE, 'utf8').replace(/^\uFEFF/, '');
+    const raw = readFileSync(file, 'utf8').replace(/^\uFEFF/, '');
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === 'object' ? parsed : {};
   } catch {
@@ -24,7 +25,13 @@ export function readUserConfig() {
   }
 }
 
-/** 写用户覆盖（整包写入；失败只返回 false，不抛）。 */
+/** 读用户覆盖（没有/坏了都返回空对象，绝不抛）。 */
+export function readUserConfig() {
+  if (existsSync(CONFIG_FILE)) return readJsonFile(CONFIG_FILE);
+  return existsSync(LEGACY_CONFIG_FILE) ? readJsonFile(LEGACY_CONFIG_FILE) : {};
+}
+
+/** 写用户覆盖（整包写入；始终写新文件；失败只返回 false，不抛）。 */
 export function writeUserConfig(patch) {
   try {
     mkdirSync(HOME, { recursive: true });

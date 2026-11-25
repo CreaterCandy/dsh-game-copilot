@@ -59,7 +59,7 @@ def load_config() -> dict:
     with open(CONFIG_PATH, encoding="utf-8") as f:
         cfg = json.load(f)
     # 一份配置：设置页改的 hotkeys / tts / memory / shot 落在插件那份
-    # (%DSH_HOME%\dsh-game-pet.json)，本地 config.json 只留机器级参数
+    # (%DSH_HOME%\dsh-game-copilot.json)，本地 config.json 只留机器级参数
     # （录音设备、音效路径、ASR 下载位置）。读插件配置走 memory_store 的 mtime 缓存。
     try:
         import memory_store
@@ -80,7 +80,7 @@ CFG = load_config()
 def normalize_hotkeys(cfg: dict) -> dict:
     """把设置页的新格式热键转成 hk_vk() 吃的 {modifiers, key}。
 
-    新格式（插件配置 %DSH_HOME%\\dsh-game-pet.json）：
+    新格式（插件配置 %DSH_HOME%\\dsh-game-copilot.json）：
         hotkeys.ptt = "capslock"
         hotkeys.extra.askScreen = {enabled:true, key:"ctrl+alt+q"}
     旧格式（早期 config.json）：
@@ -121,7 +121,7 @@ SAMPLE_RATE = int(REC.get("sample_rate", 16000))
 
 # ---- DSH 插件配置（设置页「桌宠参谋」改的那份）----
 # 为什么要读它：语音播报/音色/语速/音量/记忆模式这些开关现在统一在 DSH 设置页里改，
-# 落盘到 %DSH_HOME%\dsh-game-pet.json。读取实现放在 memory_store（按 mtime 缓存），
+# 落盘到 %DSH_HOME%\dsh-game-copilot.json。读取实现放在 memory_store（按 mtime 缓存），
 # 这里只做薄封装——好处是**改完下一句话就生效**，不用像以前那样重启播报进程。
 import memory_store as _mem  # noqa: E402  （上面已把 ROOT 插进 sys.path）
 

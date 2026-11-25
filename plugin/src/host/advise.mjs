@@ -31,7 +31,7 @@ const llm = await loadDsh('@deepseek-ai/dsh-llm');
 const { BlockAssembler, ReasoningEffortId, createUserMessage } = llm;
 
 /** 调用身份：DSH 用它给这次请求归属（缺了有些服务商会 400）。 */
-const CALL_IDENTITY = 'dsh-game-pet';
+const CALL_IDENTITY = 'dsh-game-copilot';
 
 /**
  * 识图提示词：**只抽"是哪款游戏 + 当下关键局势"**，明确禁止逐项翻译画面。
@@ -170,7 +170,7 @@ export async function askQuestion({ ctx, config, image, imageType, question, his
   const system = (typeof config.askPersona === 'string' && config.askPersona.trim()) || ASK_PERSONA;
   const maxTokens = config.askMaxTokens ?? 512;
 
-  // ── 克隆版主路径：按"作答端能不能看图"分派 ────────────────────────────
+  // ── 本项目主路径：按"作答端能不能看图"分派 ────────────────────────────
   // 只接管 askBackend=http。dsh 档保持下面原有逻辑不变。
   const route = resolveAskRoute(config);
   if (route.route !== 'dsh') {
@@ -337,7 +337,7 @@ export async function askQuestion({ ctx, config, image, imageType, question, his
               { type: 'image', attachment },
               { type: 'text', text: prompt },
             ],
-            source: { kind: 'plugin', plugin: 'dsh-game-pet' },
+            source: { kind: 'plugin', plugin: 'dsh-game-copilot' },
           }),
         ],
         system,
@@ -489,7 +489,7 @@ async function describeImage({ ctx, llmService, config, image, detection }) {
         model: candidate.model,
         sessionId: CALL_IDENTITY,
         messages: [
-          createUserMessage({ content, source: { kind: 'plugin', plugin: 'dsh-game-pet' } }),
+          createUserMessage({ content, source: { kind: 'plugin', plugin: 'dsh-game-copilot' } }),
         ],
         system: '你是识图助手：只负责从截图里认出这是哪款游戏、并抽出现下的关键局势，不做画面描述。',
         temperature: 1,
@@ -547,7 +547,7 @@ async function callText({ ctx, llmService, config, selection, system, prompt, pr
       messages: [
         createUserMessage({
           content: [{ type: 'text', text: prompt }],
-          source: { kind: 'plugin', plugin: 'dsh-game-pet' },
+          source: { kind: 'plugin', plugin: 'dsh-game-copilot' },
         }),
       ],
       system,

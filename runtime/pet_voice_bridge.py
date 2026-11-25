@@ -4,7 +4,7 @@
 ================================================================================
 game-pet 桌宠参谋  →  统一 TTS 播报  的衔接守护
 ================================================================================
-做什么：盯住 DSH 里 dsh-game-pet 的 /state，一旦桌宠给出新建议，就把文字交给
+做什么：盯住 DSH 里 dsh-game-copilot 的 /state，一旦桌宠给出新建议，就把文字交给
         tts_interface.get_tts().synthesize() 合成语音并播放。这样 game-pet 负责
         "看着游戏局势想说什么"，TTS 负责"把它念出来"，两者解耦。
 
@@ -13,7 +13,7 @@ game-pet 桌宠参谋  →  统一 TTS 播报  的衔接守护
 
 关键设计（踩过的坑都写在这）：
   1. 端口每次重启都会变（本机实测 64155-57 → 49336-38），所以**自动发现**：
-     扫 40000-65535 里 DSH 进程占用的监听端口，逐个试 /dsh-game-pet-7341/state，
+     扫 40000-65535 里 DSH 进程占用的监听端口，逐个试 /dsh-game-copilot-7341/state，
      返回 200 的就是。发现后缓存，定时复核，端口变了会自动重新发现。
   2. 只在 presence.playing == true（在玩白名单游戏）时才念，桌宠对 DSH 窗口
      自己说的话不会念出来。
@@ -47,7 +47,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "tts"))
 
-ROUTE = "/dsh-game-pet-7341/state"
+ROUTE = "/dsh-game-copilot-7341/state"
 TMPDIR = ROOT / "voices_tmp"
 LOG = ROOT / "pet_bridge_log.jsonl"
 
@@ -251,7 +251,7 @@ def main() -> int:
 
     port = discover_port()
     if port is None:
-        log("没找到 game-pet 端口——确认 DSH 已启动且 dsh-game-pet 已加载")
+        log("没找到 game-pet 端口——确认 DSH 已启动且 dsh-game-copilot 已加载")
         return 1
 
     last_counter = 0

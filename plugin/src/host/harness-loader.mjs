@@ -1,7 +1,7 @@
 // harness-loader.mjs —— 运行时找 DSH 自带的那几个包（@deepseek-ai/dsh-llm 等）。
 //
 // 为什么不能直接 `import '@deepseek-ai/dsh-llm'`：
-//   插件装在 profile 的 node_modules（profiles/desktop/node_modules/dsh-game-pet），
+//   插件装在 profile 的 node_modules（profiles/desktop/node_modules/dsh-game-copilot），
 //   而 DSH 的包在**安装目录**里（Desktop 是 app.asar 内部）。Node 从插件目录往上找
 //   node_modules 永远找不到它们，静态 import 会让整个插件加载失败（实测：路由一条都注册不上）。
 //   dsh-pet 能裸 import 是因为它自己就装在 DSH 安装目录旁边。
@@ -94,5 +94,5 @@ export async function loadDsh(spec) {
     }
   }
 
-  throw new Error(`dsh-game-pet: 找不到 DSH 包 ${spec}（试过：${errors.join(' | ')}）`);
+  throw new Error(`dsh-game-copilot: 找不到 DSH 包 ${spec}（试过：${errors.join(' | ')}）`);
 }

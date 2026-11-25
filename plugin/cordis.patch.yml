@@ -1,7 +1,7 @@
-# dsh-game-pet bundle layer —— 有意留空。
+# dsh-game-copilot bundle layer —— 有意留空。
 #
 # 为什么是空的：这个包已经由 profile 自己的 cordis.patch.yml 用一行 insert 挂载
-# （name: 'dsh-game-pet'，并带上 config）。如果这里再 insert 一行同 id 的，
+# （name: 'dsh-game-copilot'，并带上 config）。如果这里再 insert 一行同 id 的，
 # 配置树里就会出现两条同 id 的 entry，宿主**整行都不会挂上**（实测：插件静默失效、
 # 路由一条都没注册、页面毫无反应）。
 #

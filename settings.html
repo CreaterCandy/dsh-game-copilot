@@ -210,7 +210,7 @@ body.embed .wrap{gap:12px;}
 
   <div data-page-node-id="fIBCnHRAF6KiP90RlOAJa8">
     <h1 data-page-node-id="F0AtI5MTn5ImYw6ljCjcrq">游戏副驾 · 设置</h1>
-    <p data-page-node-id="3DF2CL2DypJNAcThipKX1T" class="sub">折叠版信息架构原型（可克隆版提案）· 静态页面，不连插件、不写任何配置</p>
+    <p data-page-node-id="3DF2CL2DypJNAcThipKX1T" class="sub">折叠版设置面板 · 配置即时生效</p>
   </div>
 
   <!-- 原型演示条：真实设置页不会出现 -->
@@ -1169,7 +1169,7 @@ body.embed .wrap{gap:12px;}
     // 不依赖 location.port（iframe 里可能为空，旧逻辑在这里直接 return 导致整页死掉）。
     if (!embed && !port) return;
 
-    var API = embed ? '/dsh-game-pet-7341' : ('http://127.0.0.1:' + port + '/dsh-game-pet-7341');
+    var API = embed ? '/dsh-game-copilot-7341' : ('http://127.0.0.1:' + port + '/dsh-game-copilot-7341');
     var saveState = document.getElementById('saveState');
     var current = null;
     var pendingVoice = '';
@@ -1458,7 +1458,7 @@ body.embed .wrap{gap:12px;}
     get('/workbuddy/status')
       .then(function (r) { if (!r || r.ok === false) throw new Error('fallback'); return r; })
       .catch(function () {
-        return fetch(API.replace('/dsh-game-pet-7341', '') + '/plugins/dsh-connect-workbuddy/usage', { cache: 'no-store' }).then(function (x) { return x.json(); });
+        return fetch(API.replace('/dsh-game-copilot-7341', '') + '/plugins/dsh-connect-workbuddy/usage', { cache: 'no-store' }).then(function (x) { return x.json(); });
       })
       .then(paintModelStatus)
       .catch(function () { /* 探测失败就保留原样，不打扰 */ });
@@ -1579,7 +1579,7 @@ body.embed .wrap{gap:12px;}
         var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'dsh-game-pet-' + logSource.value + '-' + new Date().toISOString().slice(0, 10) + '.log';
+        a.download = 'dsh-game-copilot-' + logSource.value + '-' + new Date().toISOString().slice(0, 10) + '.log';
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
       });
@@ -1596,7 +1596,7 @@ body.embed .wrap{gap:12px;}
   if (new URLSearchParams(location.search).get('embed') !== '1') return;
   var send = function () {
     try {
-      parent.postMessage({ type: 'dsh-game-pet:height', height: document.body.scrollHeight + 8 }, '*');
+      parent.postMessage({ type: 'dsh-game-copilot:height', height: document.body.scrollHeight + 8 }, '*');
     } catch (_) {}
   };
   if (window.ResizeObserver) new ResizeObserver(send).observe(document.body);

@@ -3,14 +3,14 @@
 // 契约（见 DSH client-modules）：加载时注册一个惰性 factory，factory 返回插件三件套；
 // react 由模块表提供，不打包。所有副作用（样式/定时器/监听）都进 ctx.effect，卸载即回收。
 window.__ModuleLoader__.load({
-  id: 'dsh-game-pet',
+  id: 'dsh-game-copilot',
   factory(require) {
     const React = require('react');
     const h = React.createElement;
     const { useEffect, useRef, useState } = React;
 
-    const NS = 'dsh-game-pet';
-    const ROUTE = '/dsh-game-pet-7341';
+    const NS = 'dsh-game-copilot';
+    const ROUTE = '/dsh-game-copilot-7341';
     /** 桌宠动画素材复用 dsh-pet 包里的 webm（插件自带则优先用自己的）。 */
     const PET_ROUTE = '/dsh-pet-7340';
     /** 没有 dsh-pet 时的兜底素材名（放包内 assets/webm/ 即可生效）。 */
@@ -306,7 +306,7 @@ window.__ModuleLoader__.load({
           const frame = frameRef.current;
           if (!frame || event.source !== frame.contentWindow) return;
           const data = event.data;
-          if (data && data.type === 'dsh-game-pet:height' && typeof data.height === 'number') {
+          if (data && data.type === 'dsh-game-copilot:height' && typeof data.height === 'number') {
             frame.style.height = `${Math.max(360, Math.min(data.height, 4000))}px`;
           }
         };
@@ -332,7 +332,7 @@ window.__ModuleLoader__.load({
       name: 'game-pet',
       inject: ['slots'],
       apply(ctx) {
-        ctx.effect(installStyles, 'dsh-game-pet: styles');
+        ctx.effect(installStyles, 'dsh-game-copilot: styles');
         // 只注册设置页。**不再往页面里插浮层**：桌宠住在独立透明置顶小窗里，
         // 网页里再来一个左下角的小人+气泡纯属重复（按用户要求去掉）。
         // 浮层那份实现还在（Companion / PetSprite），要恢复就把下面三行注释放开。

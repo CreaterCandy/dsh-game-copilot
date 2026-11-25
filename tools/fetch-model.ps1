@@ -44,7 +44,7 @@ if (Test-Path $releaseCfg) {
 }
 
 if ($mirrorUrl) {
-    $zip = Join-Path ([IO.Path]::GetTempPath()) ("dsh-game-pet-model-" + [guid]::NewGuid().ToString('N') + '.zip')
+    $zip = Join-Path ([IO.Path]::GetTempPath()) ("dsh-game-copilot-model-" + [guid]::NewGuid().ToString('N') + '.zip')
     try {
         Write-Host "从 Release 镜像下载模型包：$mirrorUrl" -ForegroundColor Cyan
         Invoke-WebRequest -Uri $mirrorUrl -OutFile $zip -UseBasicParsing

@@ -45,7 +45,7 @@ SYSTEM_PROMPT = (
 # 这些是副驾自己/宿主/常见工具窗口，不该当成"正在玩的游戏"去截。
 # 只按标题排除，命中就跳过；其余任何可见大窗口都算游戏（不写死具体游戏名）。
 NON_GAME_HINTS = (
-    "dsh-game-pet", "game pet", "桌宠", "副驾", "deepseek harness",
+    "dsh-game-copilot", "dsh-game-pet", "game pet", "桌宠", "副驾", "deepseek harness",
     "settings", "设置", "workbuddy", "codebuddy", "powershell", "cmd",
     "explorer", "资源管理器", "terminal", "visual studio", "cursor",
 )
@@ -385,7 +385,7 @@ def plugin_capability() -> dict:
     try:
         import urllib.request
 
-        url = f"http://127.0.0.1:{port}/dsh-game-pet-7341/vision/capability"
+        url = f"http://127.0.0.1:{port}/dsh-game-copilot-7341/vision/capability"
         with urllib.request.urlopen(url, timeout=3) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         _CAPABILITY_CACHE["at"] = now
@@ -415,7 +415,7 @@ def ask_via_plugin(
     if not port:
         raise RuntimeError("没找到 DSH 桌宠插件端口（DSH 没开 / 插件没加载）")
 
-    url = f"http://127.0.0.1:{port}/dsh-game-pet-7341/ask"
+    url = f"http://127.0.0.1:{port}/dsh-game-copilot-7341/ask"
     payload: dict = {"question": question, "history": history or []}
     if jpeg:
         payload["image"] = base64.b64encode(jpeg).decode("ascii")
