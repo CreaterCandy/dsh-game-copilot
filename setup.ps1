@@ -1,19 +1,31 @@
 ﻿# setup.ps1 —— 一次性安装（Windows PowerShell 5.1 可直接跑）
 #
 # 做五件事：
-#   1. 检查 Python
+#   1. 检查 Python，并把桌宠小窗用的 Electron 装好（完整包自带，无需你另外下载）
 #   2. 建 runtime\venv 并装 requirements.txt
 #   3. 把 config.example.json 落成 config.json（已存在则不动）
 #   4. 准备语音识别模型（优先 Release 镜像 + SHA256 校验，失败回退官方源）
 #   5. 把 plugin\ 装进 DSH 的 desktop profile，并写设置页默认配置
 #
 # 全程不覆盖用户已有配置；重跑是安全的。
+#
+# 用法：
+#   .\setup.ps1                  完整安装
+#   .\setup.ps1 -OnlyElectron    只装 Electron 小窗运行时（装完轻量包想补小窗时用）
+
+param(
+    [switch]$OnlyElectron
+)
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $runtime = Join-Path $root 'runtime'
 $venv = Join-Path $runtime 'venv'
 $python = Join-Path $venv 'Scripts\python.exe'
+
+# DSH 的 home：本脚本和插件（desktop-window.mjs）、热键守护（ptt_voice.pyw）必须是同一个口径，
+# 否则会出现"装好了却探测不到"。三处一致：DSH_HOME → 否则 %USERPROFILE%\.dsh
+$homeDir = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
 
 function Write-Step($text) { Write-Host "`n==> $text" -ForegroundColor Cyan }
 
@@ -22,16 +34,59 @@ function Find-ElectronBinary {
     $tries = @()
     if ($env:DSH_GAME_PET_ELECTRON) { $tries += $env:DSH_GAME_PET_ELECTRON }
     if ($env:DSH_PET_ELECTRON_PATH) { $tries += $env:DSH_PET_ELECTRON_PATH }
-    $dshHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
-    $tries += (Join-Path $dshHome 'electron\electron.exe')
-    if ($env:LOCALAPPDATA) { $tries += (Join-Path $env:LOCALAPPDATA 'electron\electron.exe') }
+    $tries += (Join-Path $homeDir 'electron\electron.exe')
+    if ($env:LOCALAPPDATA) {
+        $tries += (Join-Path $env:LOCALAPPDATA 'electron\electron.exe')
+        $tries += (Join-Path $env:LOCALAPPDATA 'Programs\electron\electron.exe')
+    }
     foreach ($t in $tries) {
         if ($t -and (Test-Path -LiteralPath $t)) { return $t }
     }
     return $null
 }
 
-Write-Step '1/5 检查 Python 与 Electron'
+# 完整发布包把 Electron 打在包内（解压后 <包根>\electron\electron.exe）。
+# 装到 DSH home 而不是让插件去认包目录：包可以被删、被挪、被重装覆盖，
+# 而 DSH home 是稳定位置，插件只看这一处，排障时也只用一个路径。
+function Install-BundledElectron {
+    $bundled = Join-Path $root 'electron\electron.exe'
+    if (-not (Test-Path -LiteralPath $bundled)) { return $null }
+    $dest = Join-Path $homeDir 'electron'
+    Write-Host "  包内自带 Electron，安装到 $dest（约 255MB，只需一次）…" -ForegroundColor DarkGray
+    try {
+        New-Item -ItemType Directory -Path $dest -Force | Out-Null
+        Copy-Item -Path (Join-Path $root 'electron\*') -Destination $dest -Recurse -Force -ErrorAction Stop
+    } catch {
+        Write-Host "  复制失败（不影响语音功能）：$($_.Exception.Message)" -ForegroundColor Yellow
+        return $null
+    }
+    $target = Join-Path $dest 'electron.exe'
+    if (Test-Path -LiteralPath $target) { return $target }
+    return $null
+}
+
+# 只装 Electron：给"下了轻量包、后来想要小窗"的人补装用，也是这段逻辑的独立测试入口。
+if ($OnlyElectron) {
+    Write-Step '只安装 Electron（-OnlyElectron）'
+    $existing = Find-ElectronBinary
+    if ($existing) {
+        Write-Host "  已存在，不用重装：$existing" -ForegroundColor Green
+        exit 0
+    }
+    $installed = Install-BundledElectron
+    if ($installed) {
+        Write-Host "  装好了：$installed" -ForegroundColor Green
+        Write-Host '  重启 DSH（或在设置页点一下小窗开关）就会生效。' -ForegroundColor DarkGray
+        exit 0
+    }
+    Write-Host '  没装成：包内没有 electron\ 目录，系统里也没找到现成的 Electron。' -ForegroundColor Yellow
+    Write-Host '  两种办法：① 换用带 Electron 的完整包（Release 里的 -full.zip）；' -ForegroundColor Yellow
+    Write-Host '            ② 设环境变量 DSH_GAME_PET_ELECTRON 指向现成的 electron.exe。' -ForegroundColor Yellow
+    exit 1
+}
+
+
+Write-Step '1/5 检查 Python、安装小窗运行时'
 
 # requirements.txt 里 numpy 2.5.x 只支持 Python >= 3.12。低版本 pip 会直接报
 # "No matching distribution found"，所以先挑一个够新的解释器，别让安装半路死掉。
@@ -88,15 +143,18 @@ requirements.txt 里锁定的 numpy 2.5.x 只支持 3.12+，低版本装不上�
 
 $electron = Find-ElectronBinary
 if (-not $electron) {
-    Write-Host '  [提示] 没找到 Electron 可执行文件：桌宠透明小窗不会启动，气泡与语音问答仍可用。' -ForegroundColor Yellow
-    Write-Host '         小窗按这四处找（任一命中即可），注意它不看 PATH：' -ForegroundColor Yellow
-    Write-Host '           1) 环境变量 DSH_GAME_PET_ELECTRON = <electron.exe 完整路径>' -ForegroundColor Yellow
-    Write-Host '           2) %DSH_HOME%\electron\electron.exe' -ForegroundColor Yellow
-    Write-Host '           3) %LOCALAPPDATA%\electron\electron.exe' -ForegroundColor Yellow
-    Write-Host '         最省事：把 electron.exe 放到 %LOCALAPPDATA%\electron\electron.exe。' -ForegroundColor Yellow
-    Write-Host '         （npm 全局装的 electron 不会被自动发现，得按上面任一条指定。）' -ForegroundColor Yellow
-} else {
+    # 完整包自带 Electron，这里直接落地；轻量包没有才落到下面的提示分支
+    $electron = Install-BundledElectron
+}
+if ($electron) {
     Write-Host "  Electron -> $electron" -ForegroundColor DarkGray
+} else {
+    Write-Host '  [提示] 没有 Electron：桌宠透明小窗不会启动，气泡与语音问答仍可用。' -ForegroundColor Yellow
+    Write-Host '         小窗按这三处找（不看 PATH，也不需要 npm 装）：' -ForegroundColor Yellow
+    Write-Host '           1) 环境变量 DSH_GAME_PET_ELECTRON = <electron.exe 完整路径>' -ForegroundColor Yellow
+    Write-Host "           2) $homeDir\electron\electron.exe" -ForegroundColor Yellow
+    Write-Host '           3) %LOCALAPPDATA%\electron\electron.exe' -ForegroundColor Yellow
+    Write-Host '         最省事：换用带 Electron 的完整包（Release 里的 -full.zip），本脚本会自动装好。' -ForegroundColor Yellow
 }
 
 Write-Step '2/5 建虚拟环境并装依赖'
@@ -162,7 +220,6 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Step '5/5 装插件 + 写设置页默认配置'
-$homeDir = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
 $profile = Join-Path $homeDir 'profiles\desktop\node_modules\dsh-game-copilot'
 if (-not (Test-Path (Split-Path $profile -Parent))) {
     Write-Host "没找到 DSH profile 目录：$profile" -ForegroundColor Yellow

@@ -4,11 +4,17 @@
 // （和 dsh-pet 同一套容错策略：桌面形态是加分项，不是唯一出路）。
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { homedir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OVERLAY_DIR = path.resolve(HERE, '..', '..', 'runtime', 'overlay');
+
+/** DSH 的 home 目录：DSH_HOME 优先，缺省 ~/.dsh（与 setup.ps1 / ptt_voice.pyw 的口径一致）。 */
+export function dshHomeDir() {
+  return process.env.DSH_HOME || path.join(homedir(), '.dsh');
+}
 
 /**
  * 探测 Electron，并把"找过哪些路径"一起返回。
@@ -20,15 +26,16 @@ export function electronProbe() {
   const explicit = process.env.DSH_GAME_PET_ELECTRON || process.env.DSH_PET_ELECTRON_PATH;
   if (explicit) {
     tried.push(explicit);
-    if (existsSync(explicit)) return { binary: explicit, tried };
+    if (existsSync(explicit)) return { binary: explicit, tried, homeDir: dshHomeDir() };
   }
-  const home = process.env.DSH_HOME;
+  // DSH 进程里 DSH_HOME 一般有值；但 setup.ps1 是在普通终端里跑的，那时 DSH_HOME 常为空，
+  // 它会装到 %USERPROFILE%\.dsh\electron。所以这里必须用同一个兜底，
+  // 否则会出现"安装脚本报告装好了、插件却探测不到"。
+  const home = dshHomeDir();
   const candidates = [];
-  if (home) {
-    candidates.push(path.join(home, 'electron', 'electron.exe'));
-    candidates.push(path.join(home, 'electron', 'Electron.app', 'Contents', 'MacOS', 'Electron'));
-    candidates.push(path.join(home, 'electron', 'electron'));
-  }
+  candidates.push(path.join(home, 'electron', 'electron.exe'));
+  candidates.push(path.join(home, 'electron', 'Electron.app', 'Contents', 'MacOS', 'Electron'));
+  candidates.push(path.join(home, 'electron', 'electron'));
   if (process.env.LOCALAPPDATA) {
     candidates.push(path.join(process.env.LOCALAPPDATA, 'electron', 'electron.exe'));
     // npm i -g electron 的常见落点（有些用户就是这么装的）
@@ -39,12 +46,12 @@ export function electronProbe() {
   candidates.push(path.resolve(HERE, '..', '..', '..', 'node_modules', 'electron', 'dist', 'electron.exe'));
   for (const candidate of candidates) {
     tried.push(candidate);
-    if (existsSync(candidate)) return { binary: candidate, tried };
+    if (existsSync(candidate)) return { binary: candidate, tried, homeDir: home };
   }
-  return { binary: null, tried };
+  return { binary: null, tried, homeDir: home };
 }
 
-/** 找 Electron 可执行文件：环境变量 → DSH 自己下载的那份（dsh-pet 用的也是这个）→ 本工程 node_modules。 */
+/** 找 Electron 可执行文件：环境变量 → DSH home 下的 electron → LOCALAPPDATA → 本工程 node_modules。 */
 function electronBinary() {
   return electronProbe().binary;
 }
@@ -61,12 +68,14 @@ export function startOverlayWindow(options) {
   const binary = probe.binary;
   if (!binary) {
     // 不静默下载：Electron 一百多兆，静默拉包在被墙/断网时只会更糟。
-    // 把"找过哪些路径"全写进日志，再给两条明确出路，用户照着做就能好。
+    // 完整发布包（-full.zip）已经把它打进去了，所以正常用户不该看到这条。
+    // 真看到时把"找过哪些路径"全写进日志，再给三条明确出路，照着做就能好。
     log?.(
       'warn',
       `没找到 Electron，置顶小窗跳过（浏览器浮层照常工作）。找过这些位置：${probe.tried.join(' | ')}。` +
-        '两种办法：① 让 DSH 自己下（首次开桌宠会下到 %DSH_HOME%\\electron）；' +
-        '② 设环境变量 DSH_GAME_PET_ELECTRON 指向你的 electron.exe',
+        `三种办法：① 换成带 Electron 的完整安装包（Release 里的 -full.zip，自带并会自动装好）；` +
+        `② 把一份 Electron 解压到 ${path.join(probe.homeDir, 'electron')}（该目录下要能看到 electron.exe）；` +
+        '③ 设环境变量 DSH_GAME_PET_ELECTRON 指向现成的 electron.exe',
     );
     return { stop: () => {}, running: () => false };
   }

@@ -32,25 +32,25 @@
 | Python 3.10+ | 是 | 安装时勾选 **Add to PATH** |
 | DSH（DeepSeek Harness） | 是 | 提供插件宿主与 HTTP 端口；先装并启动一次 |
 | OpenAI 兼容模型端点 | 是 | 本地 Ollama / LM Studio / llama.cpp，或云端 API；key 只填在设置页 |
-| Electron | 否 | 透明置顶小窗需要；缺失时问答与气泡仍可用，只是没有桌面小窗 |
+| Electron | 否 | 透明置顶小窗的运行时。**完整包已内置，`setup.ps1` 会自动装好**，不用你另外下载；只有用 `-NoElectron` 轻量包时才需自备 |
 | NVIDIA 独显 | 否 | 没有就走 CPU，功能不变只是慢；GPU 需 CUDA 12 的 cuBLAS 与 cuDNN 9 |
 
 ## 快速开始
 
 **1. 下载完整包并安装**（推荐）
 
-到 [Releases](https://github.com/CreaterCandy/dsh-game-copilot/releases) 下载最新的 `dsh-game-copilot-<版本>-full.zip`（约 430MB，已含语音识别模型），解压得到 `dsh-game-copilot` 文件夹，在其中打开 PowerShell 运行：
+到 [Releases](https://github.com/CreaterCandy/dsh-game-copilot/releases) 下载最新的 `dsh-game-copilot-<版本>-full.zip`（约 560MB，已含语音识别模型 + 桌宠小窗运行时），解压得到 `dsh-game-copilot` 文件夹，在其中打开 PowerShell 运行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
-脚本会建 `runtime\venv`、装依赖、落两份默认配置、把插件装进 DSH。模型已经在包里（`runtime\models`），**不会再联网下那 464MB**，只需联网装 pip 依赖。已有配置不会被覆盖，重跑安全。
+脚本会建 `runtime\venv`、装依赖、落两份默认配置、把插件装进 DSH，并把包内的 Electron 装到 DSH 目录（约 255MB，一次性）。模型和 Electron 都已经在包里，**不会再联网下那 464MB + 255MB**，只需联网装 pip 依赖。已有配置和已装的 Electron 不会被覆盖，重跑安全。
 
 > 想校验下载是否完整：Releases 里同时提供 `SHA256SUMS-full.txt`，用 `Get-FileHash <zip> -Algorithm SHA256` 对比即可。
 
 <details>
-<summary>另一种方式：用 Git 克隆（仓库不含模型，走 Release 模型包）</summary>
+<summary>另一种方式：用 Git 克隆（仓库不含模型和 Electron，走 Release 下载或自备）</summary>
 
 ```bash
 git clone https://github.com/CreaterCandy/dsh-game-copilot.git
@@ -59,6 +59,8 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
 仓库不含模型，但 Releases 里提供了单独的模型包 `dsh-game-copilot-model-small.zip`。正式发布时 `config/release.json` 会预置它的直链和 SHA256，脚本会自动下载并校验，这一路不用碰 HuggingFace；只有校验失败或镜像不可用时才回退官方源。校验值见 Releases 里的 `SHA256SUMS.txt`。
+
+克隆这条路也没有 Electron。想要小窗就自己放一份：把 Electron 发行包解压到 `%DSH_HOME%\electron`（该目录下能直接看到 `electron.exe`），或设环境变量 `DSH_GAME_PET_ELECTRON` 指向现成的 `electron.exe`。不放也能用，只是没有桌面小窗、只剩气泡与语音。
 
 </details>
 
@@ -125,7 +127,7 @@ node tools\test-server.mjs
 
 - **不做全屏感知**：真独占全屏下置顶窗本来就被盖住；窗口化全屏就是普通窗口，桌宠浮着符合预期。双屏用户把小窗拖到副屏即可。
 - **ASR 默认 small**：中文游戏专名识别一般，但不吃显存；换更大的模型需自行权衡显存与空闲卸载。
-- **Electron 是隐藏依赖**：项目不打包 Electron；找不到时只丢透明小窗，气泡与问答链路正常。
+- **Electron 随完整包分发**：置顶小窗只能用 Electron 起（透明、无边框、盖在游戏上层、点击穿透），浏览器页面做不到；上游 `dsh-game-pet` 是蹭 `dsh-pet` 下载的那份，本仓库独立分发没有那份可蹭，所以完整包直接内置并由 `setup.ps1` 装到 `%DSH_HOME%\electron`。用 `-NoElectron` 轻量包或 `git clone` 时才需自备，缺了只丢小窗，气泡与问答链路正常。
 - **动画素材禁商用**：非商用个人分享没问题，商业用途必须替换，见 `THIRD_PARTY_NOTICES.md`。
 
 ## 许可与致谢
