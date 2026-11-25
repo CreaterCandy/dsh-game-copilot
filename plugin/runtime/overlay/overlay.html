@@ -1,0 +1,477 @@
+<!doctype html>
+<!--
+  overlay.html —— 置顶小窗里渲染的那一页（由宿主半侧 /overlay 路由提供）。
+  与浏览器半侧（client.js）用同一份数据契约：轮询 /state 的 {counter,data} 叶子。
+  这里刻意写成"无依赖的纯 DOM"：小窗里没有 React、也不该有构建产物。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: http://127.0.0.1:19387; media-src 'self' http://127.0.0.1:19387" />
+    <title>桌宠参谋</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+        font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+        user-select: none;
+        cursor: default;
+      }
+      /* 整个根容器不吃鼠标；只有 #pet 命中区吃（配合 preload 的 setInteractive 切穿透） */
+      #root {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 6px;
+        padding: 6px;
+        box-sizing: border-box;
+        pointer-events: none;
+      }
+      #bubble {
+        pointer-events: none;
+        position: relative;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 9px 12px;
+        border-radius: 13px;
+        background: rgba(20, 20, 24, 0.86);
+        color: #f4f4f6;
+        font-size: 13px;
+        line-height: 1.5;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        transform: translateY(6px);
+        transition: opacity 0.22s ease, transform 0.22s ease;
+        /* 长回答必须换行：中文靠 break-word，长数字/URL 靠 anywhere（只写 overflow-wrap 拦不住） */
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        /* 宁可折行也别让气泡横向撑爆窗口 */
+        white-space: normal;
+        /* 兜底：真超长时气泡自己滚，别把上面的字顶出窗口（窗口固定高，溢出会被裁掉） */
+        max-height: calc(100% - 86px);
+        overflow-y: auto;
+        scrollbar-width: none;
+      }
+      #bubble::-webkit-scrollbar {
+        width: 0;
+      }
+      /* ── 气泡外观档位（设置页 → 浮层 → 气泡样式）──────────────────────
+         只换皮不动结构：每种样式只管底色/边框/圆角/阴影/字体，文字规则只在 #bubble 上写一次。 */
+      #bubble[data-style="comic"] {
+        background: #fffdf3;
+        color: #221a10;
+        border: 2px solid #221a10;
+        border-radius: 14px;
+        box-shadow: 3px 3px 0 0 #221a10;
+        font-weight: 600;
+      }
+      #bubble[data-style="comic"]::after {
+        content: "";
+        position: absolute;
+        left: 22px;
+        bottom: -9px;
+        width: 12px;
+        height: 12px;
+        background: #fffdf3;
+        border-right: 2px solid #221a10;
+        border-bottom: 2px solid #221a10;
+        transform: rotate(45deg);
+      }
+      #bubble[data-style="glass"] {
+        background: rgba(255, 255, 255, 0.16);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.42);
+        border-radius: 16px;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        backdrop-filter: blur(14px) saturate(1.25);
+        -webkit-backdrop-filter: blur(14px) saturate(1.25);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+      }
+      #bubble[data-style="hud"] {
+        background: rgba(6, 18, 24, 0.8);
+        color: #b9ffe9;
+        border: 1px solid rgba(64, 255, 214, 0.55);
+        border-radius: 5px;
+        box-shadow: 0 0 14px rgba(64, 255, 214, 0.28), inset 0 0 18px rgba(64, 255, 214, 0.08);
+        font-family: "Cascadia Mono", Consolas, "Microsoft YaHei", monospace;
+        letter-spacing: 0.3px;
+      }
+      #bubble[data-style="hud"] .heard {
+        border-bottom-color: rgba(64, 255, 214, 0.28);
+        color: #6fe0c6;
+      }
+      #bubble[data-style="plain"] {
+        background: transparent;
+        box-shadow: none;
+        padding: 2px 4px;
+        color: #ffffff;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.7);
+      }
+      #bubble[data-style="plain"] .heard {
+        border-bottom-color: rgba(255, 255, 255, 0.28);
+        color: #dfe6f2;
+      }
+      #bubble.on {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      #bubble .err {
+        margin-top: 5px;
+        font-size: 11px;
+        color: #ff9c9c;
+      }
+      /* 气泡顶部那行"你说：…"：识别出来的原话。
+         ASR 听错时（"除以3"→"除13"）一眼看出是听错还是答错，所以刻意做成小字、弱化。 */
+      #bubble .heard {
+        margin-bottom: 6px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        font-size: 11px;
+        line-height: 1.4;
+        color: #9aa8bd;
+        word-break: break-word;
+      }
+      /* 宠物命中区：可点、可拖，也是"这一块能不能交互"的判定范围 */
+      #pet {
+        position: relative;
+        width: 100%;
+        height: 200px; /* 固定高度：素材没加载出来也不会塌成 0（视频失败时仍占位） */
+        /* 允许被长气泡压矮一点，而不是把气泡顶出窗口 */
+        flex: 0 1 auto;
+        min-height: 72px;
+        pointer-events: auto;
+        cursor: grab;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+      }
+      #pet.dragging {
+        cursor: grabbing;
+      }
+      #pet video {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
+        pointer-events: none;
+        -webkit-user-drag: none;
+      }
+      #pet .placeholder {
+        width: 100%;
+        height: 100%;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      #hidden-note {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" hidden>
+      <div id="bubble"><div id="heard" class="heard" hidden></div><div id="say"></div><div id="err" class="err" hidden></div></div>
+      <div id="pet"><video id="video" autoplay loop muted playsinline></video></div>
+    </div>
+    <div id="hidden-note"></div>
+    <script>
+      (() => {
+        const ROUTE = '/dsh-game-pet-7341';
+        const PET_ROUTE = '/dsh-pet-7340';
+        const IDLE_ANIMATION = '待机呼吸休闲';
+        const BUBBLE_MS = 14000;
+
+        const root = document.getElementById('root');
+        const bubble = document.getElementById('bubble');
+        const heard = document.getElementById('heard');
+        const say = document.getElementById('say');
+        const err = document.getElementById('err');
+        const video = document.getElementById('video');
+        const pet = document.getElementById('pet');
+
+        let baseline = null;
+        let bubbleTimer = null;
+        // 已显示气泡的 at：advice 每秒被 publish 重写、counter 一直涨，
+        // 若按"任意 section 变化"重放气泡，14 秒计时器会被无限重置 → 永不消失。
+        // 这里按 advice.at 去重：同一句话只点亮一次，让它按时自然熄灭。
+        let shownBubbleAt = 0;
+        let shownBubbleErrorAt = 0;
+        let playing = false;
+        let animation = IDLE_ANIMATION;
+        let applyRegion = false;
+
+        // ── 悬停 → 可交互（让空白像素继续穿透，宠物身体能点能拖） ──────────
+        // dragging 提前声明：下面的悬停回调会读它，避免暂时性死区。
+        let dragging = false;
+        const setInteractive = (value) => {
+          if (!window.gp || applyRegion === value) return;
+          applyRegion = value;
+          window.gp.setInteractive(value);
+        };
+
+        // ── 拖拽：渲染层只报"这一帧鼠标动了多少"，宿主累加到窗口 ──────────
+        // ⚠️ 两个踩过的坑，都写清楚免得再犯：
+        //  1) 必须监听 pointerdown —— mousedown 是 MouseEvent，没有 pointerId，
+        //     setPointerCapture(undefined) 抛错被 catch 吞掉，捕获从未生效，
+        //     窗口跟手移出边界就被 mouseleave 打断（表现为拖两下就断、位移 0~2px）。
+        //  2) 位移必须取 screenX/screenY（屏幕绝对坐标）—— clientX/movementX 是相对
+        //     窗口的，窗口跟手移动会改变它们，形成"窗口动→事件→再动"的正反馈。
+        //  3) 上报给宿主的必须是**绝对屏幕坐标**，不是逐帧增量。增量累加会把每帧残差
+        //     永久留在累计值里，晃一圈回原点窗口却偏了（实测只往右/下单向偏）。绝对
+        //     定位是纯函数，光标回原点窗口必回原点，零累积、甩多快都全量跟随。
+        const isOverPet = (event) => {
+          const rect = pet.getBoundingClientRect();
+          return (
+            event.clientX >= rect.left &&
+            event.clientX <= rect.right &&
+            event.clientY >= rect.top &&
+            event.clientY <= rect.bottom
+          );
+        };
+
+        let pressScreen = null; // 按下瞬间的屏幕坐标（只用于日志/调试；定位基准在宿主端）
+        pet.addEventListener('pointerdown', (event) => {
+          if (event.button !== 0) return;
+          dragging = true;
+          pressScreen = { x: event.screenX, y: event.screenY };
+          pet.classList.add('dragging');
+          setInteractive(true);
+          try {
+            pet.setPointerCapture(event.pointerId);
+          } catch {
+            // 极老环境没有该 API：退回窗口内 pointermove 仍能拖
+          }
+          // 把按下点的屏幕坐标一起交给宿主，作为绝对定位基准
+          window.gp?.dragStart(event.screenX, event.screenY);
+          event.preventDefault();
+        });
+
+        // 捕获生效后 pointermove 始终派发到 pet；监听在 pet 上，窗口跟手也不丢事件。
+        // 上报**绝对屏幕坐标**，宿主端做 基准+差 的纯函数定位。
+        pet.addEventListener('pointermove', (event) => {
+          if (!dragging) return;
+          window.gp?.dragMove(event.screenX, event.screenY);
+        });
+
+        const endDrag = (event) => {
+          if (!dragging) return;
+          // 补上"最后一次 pointermove → pointerup"之间的最终位置：快速甩动时松手瞬间
+          // 光标可能又走了一段，用 pointerup 的绝对坐标再定位一次即可（纯函数，不累加，
+          // 即使和最后那帧 pointermove 相同也只是算回同一位置，不会走出两倍距离）。
+          // 只对 pointerup 补：pointercancel 的坐标可能是 0/无效值。
+          if (
+            event && event.type === 'pointerup' &&
+            Number.isFinite(event.screenX) && Number.isFinite(event.screenY)
+          ) {
+            window.gp?.dragMove(event.screenX, event.screenY);
+          }
+          dragging = false;
+          pressScreen = null;
+          pet.classList.remove('dragging');
+          const pid = event && event.pointerId;
+          if (pid != null) {
+            try { pet.releasePointerCapture(pid); } catch { /* 已自动释放 */ }
+          }
+          setInteractive(false);
+          window.gp?.dragEnd();
+        };
+        pet.addEventListener('pointerup', endDrag);
+        pet.addEventListener('pointercancel', endDrag); // 系统取消手势也要收尾，别让 dragging 卡住
+
+        // 穿透窗口靠 forwarded mousemove 判断"鼠标进没进宠物命中区"。
+        // ⚠️ 拖拽期间这里绝不再发 dragMove：位移已由 pointermove 上报，
+        //    两个事件同一次物理移动都发会让窗口走两倍距离。
+        document.addEventListener('mousemove', (event) => {
+          if (dragging) return;
+          setInteractive(isOverPet(event));
+        });
+        // 只在"没在拖"的时候，指针离开窗口才收回交互
+        document.addEventListener('mouseleave', () => {
+          if (!dragging) setInteractive(false);
+        });
+
+        // ── 素材回落链：**本插件自带** → dsh-pet（仅在本地没有该素材时才试）→ 占位 ──
+        // 为什么自带排最前：dsh-pet 一旦被停用/卸载，它的整条路由就消失了，
+        // 只靠它会出现"只剩气泡、小人不见"（真踩过）。自带这 10 段就是为了不再依赖它。
+        // 为什么先看 /state 里的 bundled 清单：本地没有的动作就别去试——
+        // 否则要等 404/超时才回落，观感是"卡一下才出小人"。
+        let bundled = null; // null = 还不知道，先按"都试"处理
+        const localHas = (name) => bundled === null || bundled.includes(name);
+
+        const sources = (name) => {
+          const list = [];
+          if (localHas(name)) list.push(`${ROUTE}/anim/${encodeURIComponent(name)}.webm`);
+          list.push(`${PET_ROUTE}/thumb/main/${encodeURIComponent(name)}.webm`);
+          if (name !== IDLE_ANIMATION) {
+            if (localHas(IDLE_ANIMATION)) list.push(`${ROUTE}/anim/${encodeURIComponent(IDLE_ANIMATION)}.webm`);
+            list.push(`${PET_ROUTE}/thumb/main/${encodeURIComponent(IDLE_ANIMATION)}.webm`);
+          }
+          return list;
+        };
+        let sourceIndex = 0;
+        function loadAnimation(name) {
+          const next = name || IDLE_ANIMATION;
+          // ⚠️ 同名且已经在播 → 直接返回，绝不重设 src。
+          // 为什么必须拦：tick 每秒跑一次，重设 src 会把 10 秒的素材拉回第 0 秒，
+          // 观感就是"思考动画在快速循环"（2026-11-24 实测：整段永远只播开头 1 秒）。
+          if (next === animation && video.getAttribute('src')) return;
+          animation = next;
+          sourceIndex = 0;
+          applySource();
+        }
+        function applySource() {
+          const list = sources(animation);
+          if (sourceIndex >= list.length) {
+            video.style.display = 'none';
+            if (!pet.querySelector('.placeholder')) {
+              const box = document.createElement('div');
+              box.className = 'placeholder';
+              pet.appendChild(box);
+            }
+            return;
+          }
+          video.style.display = '';
+          video.src = list[sourceIndex];
+          video.play?.().catch(() => {});
+        }
+        video.addEventListener('error', () => {
+          sourceIndex += 1;
+          applySource();
+        });
+
+        // ── 气泡外观：样式/字号/最大宽度都由 /state 的 pet 段带过来 ──────────
+        // 小窗是独立页面，读不到设置页；宿主每次 publish 都会把这三项写进 pet 段，
+        // 所以改完设置下一帧就换皮，不用重启桌面应用。
+        let lookKey = '';
+        function applyBubbleLook(data) {
+          const style = data.style || 'classic';
+          const size = Number(data.fontSize) || 13;
+          const maxW = Number(data.maxWidth) || 300;
+          const key = `${style}|${size}|${maxW}`;
+          if (key === lookKey) return;
+          lookKey = key;
+          bubble.dataset.style = style;
+          bubble.style.fontSize = `${size}px`;
+          // min()：设置的像素宽度和窗口宽度谁小听谁的，永远不横向撑出窗口
+          bubble.style.maxWidth = `min(${maxW}px, 100%)`;
+        }
+
+        function showBubble(data) {          const text = (data && data.say) || '';
+          const error = (data && data.error) || '';
+          // heard = ASR 转出来的原话（插件在 pending 与最终帧都会带）。
+          // 单独占一行小字：这样"听错了"和"答错了"肉眼可分。
+          const said = (data && data.heard) || '';
+          heard.textContent = said ? `你说：${said}` : '';
+          heard.hidden = !said;
+          say.textContent = text;
+          err.textContent = error;
+          err.hidden = !error;
+          // 有"你说"也算要露脸：思考中（还没有答案）就能先看到自己说了什么
+          const on = Boolean(text || error || said);
+          bubble.classList.toggle('on', on);
+          if (bubbleTimer) clearTimeout(bubbleTimer);
+          if (on) {
+            bubbleTimer = setTimeout(() => bubble.classList.remove('on'), BUBBLE_MS);
+          }
+        }
+
+        function render(presence, advice) {
+          playing = Boolean(presence && presence.playing);
+          root.hidden = false;
+          // 目标动作：气泡亮着、或还挂着"思考中"那一帧（advice.pending）→ 用 advice 指定的动作；
+          // 其余情况退回待机。**只在目标真的变了才换**，否则每秒 tick 都会把动画拉回开头。
+          // 用 pending 而不是 presence.busy 判"在思考"：answerQuestion 结束后 busy 可能残留，
+          // 会让小人在气泡消失后一直循环庆祝动作。
+          const thinking = Boolean(advice && advice.pending);
+          const bubbleOn = bubble.classList.contains('on');
+          const wanted =
+            (thinking || bubbleOn) && advice && advice.animation
+              ? advice.animation
+              : IDLE_ANIMATION;
+          if (wanted !== animation) loadAnimation(wanted);
+        }
+
+        function flatten(sections) {
+          const flat = {};
+          for (const key of Object.keys(sections || {})) flat[key] = sections[key]?.counter ?? 0;
+          return flat;
+        }
+        function changed(sections, base) {
+          for (const key of Object.keys(sections || {})) {
+            if ((sections[key]?.counter ?? 0) !== (base[key] ?? 0)) return true;
+          }
+          return false;
+        }
+
+        async function tick() {
+          let payload = null;
+          try {
+            const response = await fetch(`${ROUTE}/state`, { cache: 'no-store' });
+            if (response.ok) payload = await response.json();
+          } catch {
+            payload = null;
+          }
+          const sections = payload?.sections ?? {};
+          const presence = sections.presence?.data ?? { playing: false };
+          const advice = sections.advice?.data;
+          const lastError = sections.lastError?.data;
+          const pet = sections.pet?.data;
+
+          // 第一次拿到 bundled 清单时重排一次素材（避免"卡一下才出小人"）
+          if (pet && Array.isArray(pet.bundled) && bundled === null) {
+            bundled = pet.bundled;
+            sourceIndex = 0;
+            applySource();
+          }
+          if (pet) applyBubbleLook(pet);
+
+          // 气泡只在「这一句的 at」变化时重新点亮。presence 每秒都在涨 counter，
+          // 但同一句话的 at 不变——不能用 section 整体变化来重放气泡，否则计时器
+          // 每秒被重置，气泡永远不消失。
+          const adviceAt = advice?.at ?? 0;
+          const errorAt = lastError?.at ?? 0;
+          const newAdvice = advice && (advice.say || advice.heard) && adviceAt !== shownBubbleAt;
+          const newError = lastError && lastError.message && errorAt !== shownBubbleErrorAt;
+
+          if (baseline === null) {
+            baseline = flatten(sections);
+            render(presence, advice);
+            if (newAdvice) { shownBubbleAt = adviceAt; showBubble(advice); }
+            else if (newError) { shownBubbleErrorAt = errorAt; showBubble({ error: lastError.message }); }
+            schedule(presence.playing);
+            return;
+          }
+          if (changed(sections, baseline)) {
+            baseline = flatten(sections);
+            render(presence, advice);
+            if (newAdvice) { shownBubbleAt = adviceAt; showBubble(advice); }
+            else if (newError) { shownBubbleErrorAt = errorAt; showBubble({ error: lastError.message }); }
+          } else {
+            render(presence, advice);
+          }
+          schedule(presence.playing);
+        }
+
+        function schedule(isPlaying) {
+          setTimeout(() => void tick(), isPlaying ? 1000 : 3000);
+        }
+
+        loadAnimation(IDLE_ANIMATION);
+        root.hidden = false;
+        void tick();
+      })();
+    </script>
+  </body>
+</html>

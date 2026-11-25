@@ -1,0 +1,60 @@
+{
+  "_说明": "Python 侧运行参数样例。复制为 config.json 后按需修改。模型/端点/热键/桌宠显示统一在 DSH 设置页里配，落在 %DSH_HOME%\\dsh-game-pet.json；这份只管录音、音效、ASR、日志。",
+  "_可用按键": {
+    "oem_3": "反引号 ` ~",
+    "capslock": "Caps Lock（默认 PTT）",
+    "xbutton1": "鼠标侧键 1",
+    "xbutton2": "鼠标侧键 2",
+    "space": "空格",
+    "v": "V",
+    "b": "B",
+    "c": "C",
+    "f": "F",
+    "g": "G",
+    "x": "X",
+    "z": "Z"
+  },
+  "_组合说明": "modifiers 可填 ctrl / alt / shift，留空数组表示单键。PTT 建议用单键。",
+  "hotkeys": {
+    "ptt": "capslock",
+    "extra": {
+      "askScreen": { "enabled": true, "key": "ctrl+alt+q" },
+      "speakClipboard": { "enabled": true, "key": "ctrl+alt+w" },
+      "exit": { "enabled": true, "key": "ctrl+alt+shift+q" },
+      "toggleWindow": { "enabled": true, "key": "ctrl+alt+h" },
+      "typeQuestion": { "enabled": true, "key": "ctrl+alt+t" }
+    }
+  },
+  "asr": {
+    "model": "small",
+    "device": "auto",
+    "compute_type": "int8",
+    "language": "zh",
+    "beam_size": 5
+  },
+  "recording": {
+    "max_secs": 30,
+    "min_secs": 0.4,
+    "sample_rate": 16000,
+    "device_name": null
+  },
+  "feedback": {
+    "enabled": true,
+    "pack": "minimal",
+    "press_sound": "sounds/uisfx/minimal/press.wav",
+    "release_sound": "sounds/uisfx/minimal/release.wav",
+    "complete_sound": "sounds/uisfx/minimal/complete.wav",
+    "start_sound": "sounds/listen_start.wav",
+    "stop_sound": "sounds/listen_stop.wav"
+  },
+  "tts": {
+    "backend": null
+  },
+  "memory": {
+    "limit": 3,
+    "chars": 1500
+  },
+  "shot": {
+    "mode": "smart"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "_说明": "克隆版默认配置。setup.ps1 会在 %DSH_HOME%\\dsh-game-pet.json 不存在时复制过去；已经存在就不动。设置页改的也是这一份。",
+  "enabled": true,
+  "askEnabled": true,
+  "askBackend": "http",
+  "askApi": {
+    "enabled": true,
+    "baseURL": "",
+    "model": "",
+    "apiKey": "",
+    "format": "openai",
+    "maxTokens": 512,
+    "vision": "auto"
+  },
+  "visionProbe": { "status": "unknown", "checkedAt": 0 },
+  "visionApi": {
+    "enabled": false,
+    "baseURL": "",
+    "model": "",
+    "apiKey": "",
+    "format": "openai",
+    "maxTokens": 1024
+  },
+  "hotkeys": {
+    "ptt": "capslock",
+    "extra": {
+      "askScreen": { "enabled": true, "key": "ctrl+alt+q" },
+      "speakClipboard": { "enabled": true, "key": "ctrl+alt+w" },
+      "exit": { "enabled": true, "key": "ctrl+alt+shift+q" },
+      "toggleWindow": { "enabled": true, "key": "ctrl+alt+h" },
+      "typeQuestion": { "enabled": true, "key": "ctrl+alt+t" }
+    }
+  },
+  "tts": {
+    "enabled": true,
+    "backend": "auto",
+    "voice": "",
+    "speed": 1,
+    "volume": 100,
+    "streaming": true,
+    "maxChars": 60
+  },
+  "bubbleStyle": "classic",
+  "bubbleFontSize": 13,
+  "bubbleMaxWidth": 300,
+  "windowWidth": 340,
+  "windowHeight": 360,
+  "captureTarget": "auto",
+  "memoryMode": "auto",
+  "memoryLimit": 3,
+  "memoryChars": 1500,
+  "echoQuestion": true
+}

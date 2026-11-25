@@ -1,0 +1,38 @@
+# 隐私：配置里可能填了 API Key、记忆里全是真实问答
+runtime/config.json
+runtime/memory/
+runtime/shots/
+runtime/out/
+runtime/*_log.jsonl
+runtime/*.log
+config/dsh-game-pet.json
+
+# 环境与下载物（体积大 / 机器相关）
+runtime/venv/
+runtime/models/
+runtime/voices/
+runtime/voices_tmp/
+runtime/__pycache__/
+**/__pycache__/
+plugin/node_modules/
+*.pyc
+*.bak-*
+config/*.selfuse-backup
+config/*.dsh-backup
+
+# 生成物（注意别排掉 runtime/sounds/ 里的音效资源）
+dist/
+runtime/out/*.wav
+reply_*.wav
+*.tmp
+.DS_Store
+
+# 说明：
+#   - 两份 *.example.json 是要提交的（给新人当模板），别一起排掉。
+#   - assets/webm 是上游素材：代码 MIT，但 10 段 webm 上游注明禁止商用。
+#     非商用分享可带；要做商业产品必须换成自制素材。
+
+# 调试临时文件
+_shot.b64
+_askbody.json
+_probe_free.py

@@ -1,0 +1,23 @@
+{
+  "default_backend": "auto",
+  "auto_order": [
+    "edge_tts",
+    "sapi_fallback"
+  ],
+  "speed": 1,
+  "speed_note": "默认降级链两档：Edge 在线 → Windows 系统语音。第三档 offline_xiaoxiao 需自行安装微软自然人声语音包，设置页探测到真离线音色后才建议选用，不会进默认链。SAPI 系语速整数级 -10..10，1≈1.20x；edge_tts 用 backends.edge_tts.rate 的百分比，粒度更细。",
+  "backends": {
+    "offline_xiaoxiao": {
+      "voice_hint": "Xiaoxiao",
+      "offline_fallback_hint": "Xiaoxiao"
+    },
+    "edge_tts": {
+      "voice": "zh-CN-XiaoyiNeural",
+      "rate": "+20%"
+    },
+    "sapi_fallback": {
+      "voice_hint": "Huihui"
+    }
+  },
+  "voice_note": "edge_tts.voice 需带 zh-CN- 前缀与 Neural 后缀。系统语音用 SAPI token（Huihui / Xiaoxiao / Xiaoyi 等，见 tts_interface.ALIASES）。名字带 Online 的 Natural Voice 是 Edge 桥接，看着装好了但断网会失败；只有不带 Online 的才是真离线。微软自然人声有第三方许可，不可随包分发，只能用户自行安装（见 README）。"
+}

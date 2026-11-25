@@ -1,0 +1,21 @@
+# 经过实机验证的一组依赖版本。
+# 装不上时可以把 == 换成 >=；faster-whisper / ctranslate2 / numpy 这三个
+# 建议保持这组搭配，换大版本要重新验一次中文识别。
+faster-whisper==1.2.1
+ctranslate2==4.9.1
+numpy==2.5.5
+sounddevice==0.5.6
+edge-tts==7.3.1
+pywin32==312
+pillow==13.0.0
+mss==10.2.0
+imageio-ffmpeg==0.8.1
+av==12.3.0
+tokenizers==0.23.3
+huggingface_hub==2.4.0
+
+# 说明：
+#   - 没有 requirements 里列 torch / transformers：ASR 走 CTranslate2，不需要 torch。
+#   - 微软自然人声语音包有第三方许可，不随包分发；Edge 在线 + Windows 系统语音已够用。
+#   - 如果显卡是 NVIDIA，CTranslate2 走 GPU 还需要 CUDA 12 的 cuBLAS 与 cuDNN 9；
+#     没有独显或 AMD/Intel 卡会自动落 CPU，功能不变只是慢一些。

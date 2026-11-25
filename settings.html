@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html data-page-node-id="IXJcFOE7HRBEJOV9oknpzG" lang="zh-CN" data-theme="light"><head data-page-node-id="NZhorbBeTgyTy9mIVi9E9r">
+<meta data-page-node-id="SxVAQPvWxU4OLKWeFXIZ7H" charset="utf-8">
+<title data-page-node-id="K02bRe9rcqxW7xoVDovsHq" data-pnid-children="sWv7ZP7U3U7X5Pa78PjnLj">游戏副驾 · 设置（折叠版原型）</title>
+<style data-page-node-id="A5ynRk5HUlkHmLnkA4eDE4" data-pnid-children="VBjzu3GSgJFf9CSLc7L3dr">
+/* ── 设计变量：与插件 client.js 里的 --dsw-alias-* 同名，这里给出明/暗两套值 ── */
+:root{
+  --dsw-alias-bg-primary:#ffffff;
+  --dsw-alias-bg-secondary:rgba(127,127,127,.09);
+  --dsw-alias-bg-elevated:#ffffff;
+  --dsw-alias-text-primary:#1c1c1e;
+  --dsw-alias-text-secondary:#6b6b70;
+  --dsw-alias-text-tertiary:#8a8a90;
+  --dsw-alias-border-primary:rgba(127,127,127,.35);
+  --dsw-alias-border-secondary:rgba(127,127,127,.22);
+  --dsw-alias-brand-primary:#247bbf;
+  --ok:#2ea043; --ok-bg:rgba(46,160,67,.14);
+  --bad:#cf4444; --bad-bg:rgba(207,68,68,.14);
+  --warn:#9a6b00; --warn-bg:rgba(226,164,0,.14); --warn-border:rgba(226,164,0,.5);
+  --page:#f6f6f7;
+}
+html[data-theme="dark"]{
+  --dsw-alias-bg-primary:#232326;
+  --dsw-alias-bg-secondary:rgba(255,255,255,.07);
+  --dsw-alias-bg-elevated:#2c2c30;
+  --dsw-alias-text-primary:#f0f0f4;
+  --dsw-alias-text-secondary:#a3a3ab;
+  --dsw-alias-text-tertiary:#8a8a92;
+  --dsw-alias-border-primary:rgba(255,255,255,.24);
+  --dsw-alias-border-secondary:rgba(255,255,255,.14);
+  --dsw-alias-brand-primary:#4a9fe0;
+  --ok:#4ec46b; --ok-bg:rgba(78,196,107,.16);
+  --bad:#e56b6b; --bad-bg:rgba(229,107,107,.16);
+  --warn:#e0b355; --warn-bg:rgba(224,179,85,.16); --warn-border:rgba(224,179,85,.45);
+  --page:#161618;
+}
+*{box-sizing:border-box;}
+body{margin:0;padding:26px 20px 60px;background:var(--page);color:var(--dsw-alias-text-primary);
+  font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-size:13px;line-height:1.55;}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+h1{font-size:16px;margin:0 0 2px;}
+.sub{font-size:12px;color:var(--dsw-alias-text-secondary);margin:0;}
+
+/* ── 原型演示条（不属于真实设置页）── */
+.demo{border:1px dashed var(--dsw-alias-border-primary);border-radius:11px;padding:11px 13px;
+  display:flex;flex-direction:column;gap:9px;background:var(--dsw-alias-bg-secondary);}
+.demo__t{font-size:11.5px;letter-spacing:.4px;color:var(--dsw-alias-text-tertiary);text-transform:uppercase;}
+.demo__row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:12px;}
+.demo label{display:inline-flex;align-items:center;gap:5px;cursor:pointer;}
+
+/* ── 卡片 ── */
+.card{border:1px solid var(--dsw-alias-border-secondary);border-radius:11px;padding:12px 14px;
+  display:flex;flex-direction:column;gap:11px;background:var(--dsw-alias-bg-primary);}
+.card__title{font-size:13px;font-weight:600;margin:0;display:flex;align-items:center;gap:7px;}
+.grp{display:flex;flex-direction:column;gap:11px;}
+.hint{font-size:11.5px;line-height:1.55;color:var(--dsw-alias-text-tertiary);margin:0;}
+/* 解释性小字：可见一句，完整说明悬停看 */
+.hint[data-tip]{position:relative;cursor:help;border-bottom:1px dotted var(--dsw-alias-border-primary);}
+.hint[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:0;top:calc(100% + 5px);
+  z-index:60;max-width:min(360px,80vw);padding:7px 9px;border-radius:7px;white-space:normal;
+  background:var(--dsw-alias-bg-elevated);color:var(--dsw-alias-text-primary);
+  border:1px solid var(--dsw-alias-border-primary);box-shadow:0 8px 22px rgba(0,0,0,.18);
+  font-size:11.5px;line-height:1.5;pointer-events:none;}
+.hint code{font-family:ui-monospace,Consolas,monospace;font-size:11px;padding:1px 4px;border-radius:4px;
+  background:var(--dsw-alias-bg-secondary);color:var(--dsw-alias-text-secondary);border:1px solid var(--dsw-alias-border-secondary);}
+.note{font-size:12px;line-height:1.6;color:var(--dsw-alias-text-secondary);
+  background:var(--dsw-alias-bg-secondary);padding:9px 11px;border-radius:9px;margin:0;}
+.row{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+.row__label{width:118px;flex:0 0 auto;padding-top:5px;color:var(--dsw-alias-text-secondary);}
+.row__body{flex:1 1 260px;min-width:210px;display:flex;flex-direction:column;gap:5px;}
+input[type="text"],select,textarea{width:100%;padding:7px 9px;border-radius:8px;font-size:13px;
+  background:var(--dsw-alias-bg-primary);color:var(--dsw-alias-text-primary);
+  border:1px solid var(--dsw-alias-border-primary);outline:none;font-family:inherit;}
+input[type="text"]:focus,select:focus,textarea:focus{border-color:var(--dsw-alias-brand-primary);}
+textarea{min-height:58px;resize:vertical;line-height:1.5;}
+.sw{display:inline-flex;align-items:center;gap:8px;cursor:pointer;}
+.sw input{width:16px;height:16px;accent-color:var(--dsw-alias-brand-primary);}
+.radios{display:flex;gap:14px;flex-wrap:wrap;}
+.radios label{display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:12.5px;}
+.btn{padding:6px 13px;border-radius:8px;font-size:12.5px;cursor:pointer;font-family:inherit;
+  border:1px solid var(--dsw-alias-border-primary);background:var(--dsw-alias-bg-secondary);
+  color:var(--dsw-alias-text-primary);}
+.btn:hover{border-color:var(--dsw-alias-brand-primary);}
+.btn--primary{background:var(--dsw-alias-brand-primary);border-color:transparent;color:#fff;}
+.btn--sm{padding:4px 9px;font-size:11.5px;}
+/* dsh（DSH 会话模型）模式下能力探针不适用：整块变淡、按钮不可点 */
+#probeArea.is-off .radios,#probeArea.is-off #btnProbe{opacity:.5;pointer-events:none;}
+.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;
+  background:var(--dsw-alias-bg-secondary);color:var(--dsw-alias-text-secondary);}
+.pill--ok{background:var(--ok-bg);color:var(--ok);}
+.pill--bad{background:var(--bad-bg);color:var(--bad);}
+.pill--warn{background:var(--warn-bg);color:var(--warn);}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;}
+
+/* ── 警告条 ── */
+.banner{display:none;gap:9px;align-items:flex-start;padding:9px 11px;border-radius:9px;
+  background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn);font-size:12px;line-height:1.55;}
+.banner[data-on="1"]{display:flex;}
+.banner b{font-weight:600;}
+.banner a{color:inherit;text-decoration:underline;cursor:pointer;}
+.banner--ok{background:var(--ok-bg);border-color:rgba(46,160,67,.4);color:var(--ok);}
+
+/* ── 高级折叠 ── */
+.advbar{display:flex;align-items:center;gap:10px;margin-top:6px;padding-top:14px;
+  border-top:1px solid var(--dsw-alias-border-secondary);}
+.advbar__t{font-size:12px;color:var(--dsw-alias-text-secondary);}
+.advanced{display:none;flex-direction:column;gap:12px;}
+.advanced[data-on="1"]{display:flex;}
+details.group{border:1px solid var(--dsw-alias-border-secondary);border-radius:11px;
+  background:var(--dsw-alias-bg-primary);overflow:hidden;}
+details.group>summary{list-style:none;cursor:pointer;padding:11px 14px;display:flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:600;}
+details.group>summary::-webkit-details-marker{display:none;}
+details.group>summary .chev{margin-left:auto;color:var(--dsw-alias-text-tertiary);font-size:11px;transition:transform .2s;}
+details.group[open]>summary .chev{transform:rotate(90deg);}
+details.group[open]>summary{border-bottom:1px solid var(--dsw-alias-border-secondary);}
+.group__body{padding:12px 14px;display:flex;flex-direction:column;gap:11px;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--bad);display:none;flex:0 0 auto;}
+.dot[data-on="1"]{display:block;}
+.tag{font-size:10.5px;padding:1px 6px;border-radius:5px;background:var(--dsw-alias-bg-secondary);
+  color:var(--dsw-alias-text-tertiary);font-weight:400;}
+
+/* ── 运行状态条 ── */
+.runbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;border-radius:11px;
+  border:1px solid var(--dsw-alias-border-secondary);background:var(--dsw-alias-bg-primary);}
+.runbar__t{font-size:12.5px;font-weight:600;}
+.run{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dsw-alias-text-secondary);}
+.led{width:8px;height:8px;border-radius:50%;background:var(--dsw-alias-border-primary);flex:0 0 auto;}
+.led[data-on="1"]{background:var(--ok);box-shadow:0 0 0 3px var(--ok-bg);}
+.led[data-on="2"]{background:var(--bad);box-shadow:0 0 0 3px var(--bad-bg);}
+.runbar .spacer{flex:1;min-width:8px;}
+.runbar__sep{width:1px;height:15px;background:var(--dsw-alias-border-secondary);flex:0 0 auto;}
+.mono-sm{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--dsw-alias-text-tertiary);}
+
+/* ── 对话日志 / 排障 ── */
+.loglist{max-height:320px;overflow:auto;border:1px solid var(--dsw-alias-border-secondary);
+  border-radius:9px;background:var(--dsw-alias-bg-secondary);padding:8px 10px;
+  font-family:ui-monospace,Consolas,"Microsoft YaHei",monospace;font-size:11.5px;line-height:1.55;}
+.logrow{padding:5px 0;border-bottom:1px solid var(--dsw-alias-border-secondary);word-break:break-word;white-space:pre-wrap;}
+.logrow:last-child{border-bottom:0;}
+.logrow__t{color:var(--dsw-alias-text-tertiary);margin-right:7px;}
+.logrow__k{display:inline-block;padding:0 5px;border-radius:4px;background:var(--dsw-alias-bg-primary);
+  color:var(--dsw-alias-text-secondary);margin-right:6px;font-size:10.5px;}
+.logrow--err .logrow__k{color:var(--bad);}
+.logrow--ok .logrow__k{color:var(--ok);}
+.logrow__f{color:var(--dsw-alias-text-tertiary);}
+.logempty{color:var(--dsw-alias-text-tertiary);padding:10px 0;}
+
+/* 卡片内的小节分隔：左边标题，右边一条细线 */
+.subhead{display:flex;align-items:center;gap:9px;font-size:11.5px;font-weight:600;
+  color:var(--dsw-alias-text-tertiary);margin:2px 0 -2px;}
+.subhead::after{content:'';flex:1;height:1px;background:var(--dsw-alias-border-secondary);}
+
+/* ── 输入条预览（虚线框，不是真控件） ── */
+.preview{border:1px dashed var(--dsw-alias-border-primary);border-radius:11px;padding:11px 13px;
+  background:var(--dsw-alias-bg-secondary);}
+.preview__t{font-size:11.5px;color:var(--dsw-alias-text-tertiary);margin-bottom:9px;}
+.winmock{width:300px;max-width:100%;border:1px solid var(--dsw-alias-border-primary);border-radius:10px;
+  background:var(--dsw-alias-bg-primary);padding:8px;display:flex;flex-direction:column;gap:8px;
+  box-shadow:0 4px 14px rgba(0,0,0,.07);}
+.typebar{display:flex;gap:6px;align-items:center;background:var(--dsw-alias-bg-primary);
+  border:1px solid var(--dsw-alias-brand-primary);border-radius:8px;padding:4px 5px 4px 9px;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--dsw-alias-brand-primary) 14%, transparent);}
+.typebar input{border:0;background:transparent;flex:1;min-width:0;font-size:12.5px;padding:3px 0;
+  outline:none;color:var(--dsw-alias-text-primary);font-family:inherit;}
+.typebar input::placeholder{color:var(--dsw-alias-text-tertiary);}
+.winmock__pet{min-height:88px;display:flex;align-items:center;justify-content:center;text-align:center;
+  padding:0 12px;border-radius:8px;background:var(--dsw-alias-bg-secondary);
+  color:var(--dsw-alias-text-tertiary);font-size:11px;line-height:1.5;}
+
+/* ── 热键捕获 ── */
+.hk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.hk input{flex:1 1 170px;font-family:ui-monospace,Consolas,monospace;cursor:pointer;}
+.hk input[data-rec="1"]{border-color:var(--dsw-alias-brand-primary);
+  box-shadow:0 0 0 3px rgba(36,123,191,.18);color:var(--dsw-alias-brand-primary);}
+.hk-grid{display:flex;gap:8px;flex-wrap:wrap;}
+.hk-cell{flex:1 1 150px;display:flex;flex-direction:column;gap:4px;}
+.hk-on{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--dsw-alias-text-secondary);cursor:pointer;}
+.hk-on input{width:14px;height:14px;accent-color:var(--dsw-alias-brand-primary);}
+.hk-cell input[type="text"]{cursor:pointer;font-family:ui-monospace,Consolas,monospace;}
+.hk-cell input[type="text"][disabled]{opacity:.42;cursor:not-allowed;border-style:dashed;}
+
+/* 恢复默认后的反馈：输入框闪一圈品牌色 */
+@keyframes dflash{0%{box-shadow:0 0 0 2px var(--dsw-alias-brand-primary)}100%{box-shadow:0 0 0 2px transparent}}
+.flash{animation:dflash .65s ease-out;}
+
+/* ── 引导 ── */
+.wizard{display:none;flex-direction:column;gap:10px;}
+.wizard[data-on="1"]{display:flex;}
+.steps{display:flex;gap:8px;flex-wrap:wrap;}
+.step{flex:1 1 170px;border:1px solid var(--dsw-alias-border-secondary);border-radius:9px;padding:9px 10px;
+  font-size:12px;line-height:1.5;background:var(--dsw-alias-bg-secondary);}
+.step b{display:block;font-weight:600;margin-bottom:2px;}
+.step[data-state="done"]{border-color:rgba(46,160,67,.45);}
+.step__n{display:inline-flex;width:16px;height:16px;border-radius:50%;align-items:center;justify-content:center;
+  font-size:10.5px;background:var(--dsw-alias-bg-primary);border:1px solid var(--dsw-alias-border-primary);
+  margin-right:4px;}
+.foot{font-size:11.5px;color:var(--dsw-alias-text-tertiary);text-align:center;padding-top:8px;line-height:1.7;}
+
+/* ── 内嵌模式（DSH 设置面板 iframe 用 ?embed=1）：藏掉原型痕迹，贴合 DSH 外壳 ── */
+body.embed{padding:14px 16px 40px;background:transparent;}
+body.embed .demo,body.embed .foot,body.embed .sub{display:none !important;}
+body.embed .wrap{gap:12px;}
+</style>
+</head>
+<body data-page-node-id="MgC1vQBJVqesqhuHvde4ks"><script>if(new URLSearchParams(location.search).get('embed')==='1')document.body.classList.add('embed');</script>
+<div data-page-node-id="2vDOuv87hqZr4aeBOqC5g2" class="wrap">
+
+  <div data-page-node-id="fIBCnHRAF6KiP90RlOAJa8">
+    <h1 data-page-node-id="F0AtI5MTn5ImYw6ljCjcrq">游戏副驾 · 设置</h1>
+    <p data-page-node-id="3DF2CL2DypJNAcThipKX1T" class="sub">折叠版信息架构原型（可克隆版提案）· 静态页面，不连插件、不写任何配置</p>
+  </div>
+
+  <!-- 原型演示条：真实设置页不会出现 -->
+  <div data-page-node-id="4ipxAYyYC1LmhusPOcBRBo" class="demo">
+    <div data-page-node-id="PXZ5aj3XIEId80HzUc8PA7" class="demo__t">原型演示开关 · 真实设置页不含此栏</div>
+    <div data-page-node-id="xfSSKFsbH2UCexF2Y4lYlY" class="demo__row">
+      <span data-page-node-id="CcJeTqFouuX42NXEAsR1eH">主题</span>
+      <label data-page-node-id="Ywbtzz56wFE9M7nYfDV9ia"><input data-page-node-id="NDSqMOy6Re3s1ZmHGVBXJ5" type="radio" name="theme" value="light" checked=""> 明</label>
+      <label data-page-node-id="9u5lpykKbZQGUzz2jlJwWl"><input data-page-node-id="QgBYR6TtnQpzGPuUIGG8Ho" type="radio" name="theme" value="dark"> 暗</label>
+      <span data-page-node-id="IDlC2WW3UnBw284PJBytzc" style="color:var(--dsw-alias-text-tertiary)">｜</span>
+      <span data-page-node-id="aB5cJlA8lAoXekFt9lej5E">接入的模型</span>
+      <label data-page-node-id="Jjupy7iHN43xw2wn84SWcB"><input data-page-node-id="KgKV4AALCLpBHKVS1NvTfY" type="radio" name="cap" value="vision" checked=""> 能看图</label>
+      <label data-page-node-id="AjJ0wNbA52vnTu4kJZCEjw"><input data-page-node-id="64SoQMxYsGK7tKiaSNmC7k" type="radio" name="cap" value="text"> 只能出文字</label>
+      <span data-page-node-id="4wZ1B9Y1CblxJIGsJaxBAq" style="color:var(--dsw-alias-text-tertiary)">｜</span>
+      <label data-page-node-id="10KmNWFkjV0EnRaYcRvoGR"><input data-page-node-id="EsiZ3aPLDjZGCF3a8FXiJW" type="checkbox" id="cbWizard"> 显示首次启动向导</label>
+    </div>
+    <p data-page-node-id="I7IJL8RWVnJTOG2HfJruQd" class="hint" data-tip="切到「只能出文字」后点测一下，可看盲答提示与高级组展开" style="margin:0">点「测一下」看盲答效果</p>
+  </div>
+
+  <!-- 运行状态条：一个按钮启动/停止整条链路 -->
+  <div data-page-node-id="XkFy99oovvoVm7HlLclejx" class="runbar">
+    <span data-page-node-id="xTwRtep1NYjUDHURRcItdv" class="runbar__t">副驾</span>
+    <span data-page-node-id="JRgkSN0HBhaqppwTdPEEPi" class="run"><span data-page-node-id="PXiOQn3DzcYvBC37H7x6yt" class="led" id="ledPtt"></span><span data-page-node-id="REyUx6I37MR3nUoLaDr1GM" id="txtPtt">按键守护 未运行</span></span>
+    <span data-page-node-id="AORccEZsV3EbCL9uITyN5o" class="run"><span data-page-node-id="0MLXHTpRtvTrEEp4mrNDKL" class="led" id="ledBridge"></span><span data-page-node-id="7Q317jpHhRgdCzwmiOuioN" id="txtBridge">播报桥 未运行</span></span>
+    <span data-page-node-id="qqjQYEMHAD95iQl5vEHomC" class="runbar__sep"></span>
+    <span data-page-node-id="52zz0Gh3Qvn6WReUXsyzPr" class="run"><span data-page-node-id="TopLbQ2k7muQY2zASm5dc5" class="led" id="ledWin" data-on="1"></span><span data-page-node-id="MYDqmh6tSIx3wLGO7SBiib" id="txtWin">小窗 显示中</span></span>
+    <span data-page-node-id="405qqdcY7ivoqrl0sKL3Es" class="mono-sm" id="runMeta"></span>
+    <span data-page-node-id="OsSH5sYE5cKc2arjxIw0Jg" class="spacer"></span>
+    <button data-page-node-id="gY99rn2xt3RaQFNcF9GpIb" class="btn btn--sm" id="btnWin">隐藏小窗</button>
+    <button data-page-node-id="526mt7LxOzUNeagdbGYwbM" class="btn btn--sm" id="btnSave">保存设置</button>
+    <span data-page-node-id="YDGAyyPF3ljj0Ey5dqa7e1" class="pill" id="saveState">演示模式 · 未连接后端</span>
+    <button data-page-node-id="7ZI8JqNJKRZLfLirhXwZ4V" class="btn btn--primary" id="btnRun">启动副驾</button>
+  </div>
+
+  <!-- L3 首启向导 -->
+  <div data-page-node-id="2GoF3wewDCcScK5NaDGM6f" class="card wizard" id="wizard">
+    <h3 data-page-node-id="uCkUROQPyxfAz1Y8QjESAQ" class="card__title">开始用之前，两步</h3>
+    <div data-page-node-id="DhDVpUZzBnEhzF5yw6hFiq" class="steps">
+      <div data-page-node-id="bDqPVuFdL2rzsbClooVKZS" class="step" data-state="done"><b data-page-node-id="BcgPtZYKOcupzYiR5uEK9y"><span data-page-node-id="0n5876NDssLDIv5W3DGK0O" class="step__n">1</span>填一个模型端点</b>
+        本地 ollama / LM Studio / 云端 OpenAI 兼容，都填同一格。已经填好。</div>
+      <div data-page-node-id="iJRxthVCkKsHZp4RtO06uM" class="step"><b data-page-node-id="LbLXdlBqlfZcTmgLVT1YEQ"><span data-page-node-id="U1zy6ivUyjfcpW3FwiGnTu" class="step__n">2</span>点「测一下」</b>
+        自动判断它能不能看图：能就直接用；不能就只会答不靠画面的问题。</div>
+      <div data-page-node-id="FhFSgMQxuF4aJFfophUI3i" class="step"><b data-page-node-id="TOKfWlJ3WjpFCQxNYX1GB3"><span data-page-node-id="8XRTSXcq2txp26jSTBigy0" class="step__n">3</span>（可选）补一个识图端</b>
+        想让它看屏幕但主模型不会看图时，展开「高级选项 → 独立识图端」。</div>
+    </div>
+    <p data-page-node-id="Lb2hzHYKipSLeUNwas2oqX" class="hint" data-tip="之后所有配置都在下方卡片里，高级项默认收起">仅首次显示</p>
+  </div>
+
+  <!-- ① 模型与能力（常驻门面卡）-->
+  <div data-page-node-id="i9kY90JUINvdlUCGCPP8cE" class="card">
+    <h3 data-page-node-id="tdRCJW51GEOdSNuYp9bebw" class="card__title">模型与能力</h3>
+    <div data-page-node-id="Bt8ExIpq2sc0Tb3IYRQtlv" class="row">
+      <div data-page-node-id="BzQLTjyL8wBDEa2VHmc77E" class="row__label">来源</div>
+      <div data-page-node-id="Psz9HSF092MEGtmgVySPb7" class="row__body">
+        <select data-page-node-id="TwLQKzVeAAwLG62GZdkSS3" id="srcSel">
+          <option data-page-node-id="mj8MToSQkAA8F85SrKwoe8" value="http">自定义端点（本地模型或云端 API）</option>
+          <option data-page-node-id="3MlCLtcwFhJWAHHrbm3mKA" value="dsh">DSH 当前会话模型（可选）</option>
+        </select>
+        <p data-page-node-id="3Poj3pT53Rly7tiODHFWXx" class="hint" data-tip="llama.cpp / Ollama / LM Studio 和云端 OpenAI 兼容 API 都用 baseURL" id="srcHint">本地与云端填同一格，只是地址不同</p>
+      </div>
+    </div>
+    <div data-page-node-id="ecyo3wjCDae6JLndoH8HYr" class="grp" id="httpFields">
+    <div data-page-node-id="FKAAAq49GHMlTIqfNZ9xrQ" class="row">
+      <div data-page-node-id="Gz8m1ZpHEEd7Gbp43Mlh6W" class="row__label">端点</div>
+      <div data-page-node-id="ZC8xWm7JoUiq7LKA0AKMx5" class="row__body">
+        <div data-page-node-id="ZLv9nBqegUUlEkyaQmAHuC" class="inline">
+          <input data-page-node-id="SGwy8vIo7DGHwjAHzobvPa" type="text" id="epUrl" value="" style="flex:1 1 220px">
+          <button data-page-node-id="qrEyQE4ldLEA3NOhsl321L" class="btn btn--sm" id="btnEpLocal">Ollama 示例</button>
+        </div>
+      </div>
+    </div>
+    <div data-page-node-id="g5ZlDuhffIEUAeRYikbInd" class="row">
+      <div data-page-node-id="tfexO0tc5q9NBFXzgz5spq" class="row__label">格式</div>
+        <div data-page-node-id="LBYjRM2GoLreYaGskDiGiQ" class="row__body"><select data-page-node-id="9Ol05r7ypL2Bd8EN5GgBSo" id="selFormat"><option data-page-node-id="X25E8EvubjqnJBj0pa7Rjp" value="openai">OpenAI 兼容（/chat/completions）</option><option data-page-node-id="uHTzb8O0QeZxREeq32DrBj" value="anthropic">Anthropic（/v1/messages）</option></select></div>
+    </div>
+    <div data-page-node-id="gFR6RGkqKjsljIBpHBaTHF" class="row">
+      <div data-page-node-id="gXZGe6AFTKC7A3gznFKJ2U" class="row__label">模型</div>
+      <div data-page-node-id="vQGy8tOBYxDhO0W9hCWhOT" class="row__body"><input data-page-node-id="4jioFbNNYDpkx3z5Xm9b0R" type="text" id="mdlName" value=""></div>
+    </div>
+    <div data-page-node-id="TyM1rX4c4u9cQRwwFUpgez" class="row">
+      <div data-page-node-id="VtBH8LlET8wOLfJdmGA210" class="row__label">API Key</div>
+      <div data-page-node-id="ntPNHRYtpryJ75ZonIae6e" class="row__body">
+        <div data-page-node-id="GHRxgHrYFTV6HXycvWhRJC" class="inline"><input data-page-node-id="RRHdHbkLy3HkDbAnZU1FqM" type="text" id="inApiKey" value="__KEEP__" style="flex:1 1 200px"><button data-page-node-id="JoCEOzLWG3cArazLarT4qV" class="btn btn--sm" id="btnKeyClear">清空</button></div>
+        <p data-page-node-id="W88NED2h0xjroaa9Dacqwu" class="hint" data-tip="多数本地服务不需要 Key">留空 = 不需要 Key</p>
+      </div>
+    </div>
+    </div>
+    <div data-page-node-id="DnY2spRZicWK8m1BeVPtND" class="grp" id="cloudFields" style="display:none">
+      <div data-page-node-id="QxbWmQNofj4bAlXt0IpNYf" class="row">
+        <div data-page-node-id="EGtBFyJ2ZvEWdsLVz2GlJp" class="row__label">账号</div>
+        <div data-page-node-id="n08PEWBlfbe0STNWIDwoQ2" class="row__body">
+          <div data-page-node-id="9urY8zQhM9tMQ3Ma02fvj3" class="inline"><span data-page-node-id="sqkYEXLlrZHOOjut3Uf8xC" class="pill pill--bad">未连接</span><button data-page-node-id="wnAPJ8vDhFHiU43FuMCAj9" class="btn btn--sm">在 DSH 中连接模型服务</button></div>
+          <p data-page-node-id="I6nZvVIdQtAPOAsFrjRaN4" class="hint" data-tip="没有 baseURL 和 Key 可填">云端走 DSH 登录态</p>
+        </div>
+      </div>
+      <div data-page-node-id="frHPCzzqyXu7jXgsF1BMrN" class="row">
+        <div data-page-node-id="5xim15A8bbdw2FKEwQSIga" class="row__label">模型</div>
+        <div data-page-node-id="ELMV05RmDyCvfPiSDy4yCQ" class="row__body">
+          <select data-page-node-id="Av4SjwRsjMgwBLJlJ5sqes" id="cloudModel">
+            <option data-page-node-id="rxuejGAxYpxO4aGdpX42JH">DSH 会话模型（由 DSH 端决定）</option>
+            
+            <option data-page-node-id="gEf0HMWs5cijNRydqhnKKB">跟随当前对话的模型</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div data-page-node-id="HnAhCHGjQcpFud0Vi6vpu3" class="row" id="probeArea">
+      <div data-page-node-id="QBGH6kIVBR512AMptwBzzu" class="row__label">能力</div>
+      <div data-page-node-id="Hy1pHmIFHuOhZ7pWjH2yMA" class="row__body">
+        <div data-page-node-id="cxaCS1PhJAlNVjOCSSaQnK" class="radios">
+          <label data-page-node-id="RKWkudfMwOLWyj3DoKmDrG"><input data-page-node-id="y0SCBEAvGYVTIDHKuKgEM7" type="radio" name="capmode" value="auto" checked=""> 自动判断（推荐）</label>
+          <label data-page-node-id="KYoLCIFqv3HSWR6FFmYL6I"><input data-page-node-id="DuAZxsRmLSO0cUWY0CxIl6" type="radio" name="capmode" value="vision"> 能看图</label>
+          <label data-page-node-id="dVFnif9EAyafaCyVGHGqPt"><input data-page-node-id="uFRfLVCnWOO3Yl9dyXdCG8" type="radio" name="capmode" value="text"> 只能出文字</label>
+        </div>
+        <div data-page-node-id="ksjhESsIohcGELSgUOk6IF" class="inline">
+          <button data-page-node-id="DHvKE1Iqk9UEz1u6YuwqOO" class="btn btn--sm" id="btnProbe">测一下</button>
+          <span data-page-node-id="KRIaKyx7DRenhzqz5wEeWM" id="probeOut" class="mono" style="color:var(--dsw-alias-text-secondary)"></span>
+        </div>
+        <p data-page-node-id="lHH82PpSbCNnr9kd7s4eLv" class="hint" data-tip="发一张随机四位数字小图问「图里数字是几」，答对才算能看图，判一次记住，换端点自动重判" id="probeHint">自动判断 = 发数字小图测一次，结果会记住</p>
+        <p class="hint" id="probeDshHint" style="display:none">走 DSH 会话模型时能力由 DSH 端判断，这里不用测。</p>
+      </div>
+    </div>
+    <div data-page-node-id="CMACd8gGZXOjkbnqthM4R9" class="row">
+      <div data-page-node-id="xfR7MDEgDgyRyLLtF7En6u" class="row__label">它看哪儿</div>
+      <div data-page-node-id="1SiV77IDuGFNTXfhqWIXq6" class="row__body">
+        <select data-page-node-id="uiQXLNmJzxmKxTmU8XAY4P" id="selCapture">
+          <option data-page-node-id="fLW2g0aLY5Ycs1kzHlVmEC" value="auto">自动：游戏/前台窗口优先，没有就截主屏（默认）</option>
+          <option data-page-node-id="Gir0hvmONR82FARLPNIWuD" value="primary">主屏：整块主显示器</option>
+          <option data-page-node-id="6arTKqLpFo8JfZVStpvrVe" value="secondary">副屏：另一块显示器</option>
+          <option data-page-node-id="ALpUtW8y8SQLUG46cEQ6q1" value="window">只看当前窗口（不截整屏）</option>
+          <option data-page-node-id="6OLXP4pf9iqTMcdw8Fypzt" value="all">双屏拼接（最全，但每块屏会被压得看不清）</option>
+        </select>
+      </div>
+    </div>
+    <div data-page-node-id="jfRqFqLc1kgDBC18HFz3Vt" class="banner" id="bannerBlind">
+      <span data-page-node-id="9Fuov1hXnvVWXsY25JbZie">⚠</span>
+      <div data-page-node-id="Fr8g9uJw5Y29OEcBLDhLvU"><b data-page-node-id="Ns8AANa4fAbz5GkEwXCfI8">当前模型看不到画面，只能答不靠画面的问题。</b>
+      问到「这里怎么过」这类必须看屏幕的问题时，它只会回一句「我这边看不到画面」，不会瞎猜画面内容。
+      <a data-page-node-id="sAFwOBtzpom4mevmjAboXC" id="lnkToVision">去配识图端 →</a></div>
+    </div>
+    <div data-page-node-id="q03HiH0oNkz5nDl4tvaDiu" class="banner banner--ok" id="bannerTwo">
+      <span data-page-node-id="JqMUxSndFbtKLlSb4QlflL">✓</span>
+      <div data-page-node-id="s48BOdqqzVBz3F4v51Dldi"><b data-page-node-id="hhl2ueHXgEZQVfkgLHv4lh">两步式已生效：</b>识图端先描述画面，再由当前模型作答，每次多约 1 秒。</div>
+    </div>
+  </div>
+
+  <!-- ② 语音问答（原「按键问答」+ 原「语音播报」合并成一张） -->
+  <div data-page-node-id="B9BzDSDF2HFUtaAauu4X0f" class="card">
+    <h3 data-page-node-id="ueSJ7ECHa6sASETlXIMCFp" class="card__title">语音问答</h3>
+    <p data-page-node-id="73XVrAGDfony26huko3D0F" class="note">按住说话键问，它出声答。打字问、问剪贴板走的也是这条链路——同一个模型、同一套要不要截图的判断。</p>
+    <div data-page-node-id="Uy5jQiMkExozup09kMWPWb" class="row">
+      <div data-page-node-id="7LAZ7l3AHGyC64jqJIimcq" class="row__label">启用</div>
+      <div data-page-node-id="mzwFBIQ9oieDigueN9RE1w" class="row__body">
+        <label data-page-node-id="XyCF8YdWbfTmRbzrkgFP11" class="sw"><input data-page-node-id="ADgASe8har5iGfX6YhPVSq" type="checkbox" id="cbPtt" checked="">按住说话键说话，松开后出气泡并念出来。</label>
+        <p data-page-node-id="VmzCOJrakmdqHVQ6GKAoaF" class="hint" data-tip="按住说话键说话，松开后出气泡并念出来">关掉后不能问，自动开口不受影响</p>
+        <p data-page-node-id="cFq2GEg64ie7DJQfgrHkVZ" class="hint" data-tip="小窗关掉照样能问，只是只出声、不出字；两个都开才既有气泡又有声音">与小窗显隐独立：都开才有气泡+声音</p>
+      </div>
+    </div>
+    <div data-page-node-id="iYHmNHpuvLXvbxC8NKdipD" class="banner" id="bannerMute" style="display:none">
+      <span data-page-node-id="pdvG8cXguTQl2CQEJh9jY1">!</span>
+      <div data-page-node-id="8JY6ETUZg648FDLxiJiMMr"><b data-page-node-id="mcwsj9LIpQHBE1gM64Dxcw">小窗收起了，语音也关着</b> —— 现在问它既听不到也看不到，等于没反应。
+      按 <code data-page-node-id="RprBbJ1pdHhV1Zpa7gEFph" data-pnid-children="RWoLbs106Fwk92cG5YBjLq">Ctrl + Alt + H</code> 或点上面状态条里的「显示小窗」就能恢复。</div>
+    </div>
+    <div data-page-node-id="Q1VFo01JHTHvd8OnXeWXif" class="row">
+      <div data-page-node-id="5AeT0AMMwrIRe4hjfVpMJQ" class="row__label">按住说话键</div>
+      <div data-page-node-id="hqDCKQOsHhH6QZk07Ybi9B" class="row__body">
+        <div data-page-node-id="vYBWVUpbMI11MXyGQoD3fO" class="hk">
+          <input data-page-node-id="pC4qZW6EyJIbBzJvjFeXTA" type="text" id="hkPtt" value="Caps Lock" readonly="" data-hk="ptt">
+          <button data-page-node-id="drmLF07AZhakJDLRvru8lM" class="btn btn--sm" id="btnHkReset">恢复默认</button>
+        </div>
+        <p data-page-node-id="lYVRjQQtiH8Acr8FVDovvf" class="hint" data-tip="按键含修饰键如 Ctrl+Alt+Q；Caps Lock 在游戏里几乎不占用，也不占输入法，改成字母键会和游戏抢键">点框后按键；Caps Lock 最不抢键</p>
+        <p data-page-node-id="SRagNv9v8IG7Uz8Zr1jAUl" class="hint" id="hkWarn" style="display:none;color:var(--bad)"></p>
+      </div>
+    </div>
+    <div data-page-node-id="f2iERPa7TQmUdR9AOzJyGq" class="row">
+      <div data-page-node-id="yEWgjPd0uERcjxpwdWyPNa" class="row__label">其他热键</div>
+      <div data-page-node-id="eCfT79i0FSBKprfxY7wWco" class="row__body">
+        <div data-page-node-id="Fd55Llvfa9n3Rb22e7U4Hm" class="hk-grid">
+          <div data-page-node-id="MLxPFrRqIIlKp7lblol9XQ" class="hk-cell">
+            <label data-page-node-id="WvFZAYdSaDpX53XRAJnyKC" class="hk-on"><input data-page-node-id="ZafXFG31ZMqxmFUdHOMLcT" type="checkbox" data-hk-on="ask" checked=""> 问当前画面</label>
+            <input data-page-node-id="ICZiaYEt4zIKweDoUeQAJN" type="text" value="Ctrl + Alt + Q" readonly="" data-hk="ask">
+          </div>
+          <div data-page-node-id="L07aS7x3DHn76LgIW6fju7" class="hk-cell">
+            <label data-page-node-id="nJzD4oQEaXBKGZAJ69D1li" class="hk-on"><input data-page-node-id="Dcwv6POyV4yy96cHawO98x" type="checkbox" data-hk-on="clip" checked=""> 念剪贴板</label>
+            <input data-page-node-id="sud3mSzIV21I3BEvkKaBmD" type="text" value="Ctrl + Alt + W" readonly="" data-hk="clip">
+          </div>
+          <div data-page-node-id="A4scjbHNcMdx0I5o05Z42H" class="hk-cell">
+            <label data-page-node-id="CFBcAzppU4AeJhUPr3KQRG" class="hk-on"><input data-page-node-id="RspHLys3726rMMY3ECZGZQ" type="checkbox" data-hk-on="exit" checked=""> 退出守护</label>
+            <input data-page-node-id="wakaFU0Y0N3yoHZT9l6jCk" type="text" value="Ctrl + Alt + Shift + Q" readonly="" data-hk="exit">
+          </div>
+        </div>
+        <p data-page-node-id="Awkeh4ubpHKlUEiHl8TUN6" class="hint" data-tip="也不参与冲突检查；三个都可以关，退出守护关掉还有「停止」按钮兜底">关掉 = 该键整个不注册</p>
+      </div>
+    </div>
+    <div data-page-node-id="6s2Mb9PxrHqX0X7wLamxMF" class="row">
+      <div data-page-node-id="em4rsppsNYivFD0GimVGoV" class="row__label">剪贴板用途</div>
+      <div data-page-node-id="nALzdcwG8YurY6vRFfDObd" class="row__body">
+        <select data-page-node-id="bundah4NLcAkyLYO5Esv4o" style="max-width:250px"><option data-page-node-id="8H92BCYI3o576X4xAItJ4E">念出来（现在的行为）</option><option data-page-node-id="Q0rtNEhSL2A6w9MCp59V4u">当问题问它（含截屏判断）</option></select>
+        <p data-page-node-id="Td2m472shS3mrDfFcDx0T7" class="hint" data-tip="在记事本、聊天框写好问题复制，按热键直接问；不抢焦点，全屏游戏不会切出去">复制问题后按 Ctrl+Alt+W，不切出游戏</p>
+      </div>
+    </div>
+    <div data-page-node-id="DBuCJuy4qIk6MrdAhUALBy" class="row">
+      <div data-page-node-id="qvJIMSslfcLnkM5abHvAzc" class="row__label">回答上限</div>
+      <div data-page-node-id="fDBLq1CAXgwbjEDfPB8PFE" class="row__body"><input data-page-node-id="rURyICstZUwh9jMiBhfYdC" type="text" value="512"><p data-page-node-id="PMtQaAo8RRws6lA87prbnN" class="hint" data-tip="太小会答一半">token，默认 512</p></div>
+    </div>
+    <div data-page-node-id="dj1el7Mczm9a68enpvtEDx" class="row">
+      <div data-page-node-id="HBUOZrkthqRDzYCyMDG5DK" class="row__label">回显识别文本</div>
+      <div data-page-node-id="fDhTwvSAQObGsmQWCyYwaa" class="row__body">
+        <label data-page-node-id="9D9YrAcSjQJBSSVIDdeQOT" class="sw"><input data-page-node-id="6FQzNU4gzt4ELGoUSdpu2l" type="checkbox" checked=""> 气泡顶部显示「你说：…」</label>
+        <p data-page-node-id="LMiZ6PYZQDql8OybDrdBVz" class="hint" data-tip="听不准时一眼看清是哪一种">区分「没听清」和「答错」</p>
+      </div>
+    </div>
+    <div data-page-node-id="DW2UAVfq8XdKUJuSNxdhj5" class="row">
+      <div data-page-node-id="exC1Qd4p1VX4SPM7YZbIS1" class="row__label">记忆</div>
+      <div data-page-node-id="Ab9xObaL4alMYHvZmKnMV7" class="row__body">
+        <select data-page-node-id="P260A5Xm8qd77S7JpBaLGJ"><option data-page-node-id="Qvidtxf9XnQdtRG6Rh7pNu">只有追问才翻历史（默认）</option><option data-page-node-id="PmfbptNODjtyLXmB0qZIua">每次都带最相关的几条</option><option data-page-node-id="MFdN6Xwdd2Hii6mejhxGxh">完全不带历史</option></select>
+        <p data-page-node-id="TbEgfEglotX2xxK0Kc6SwI" class="hint" data-tip="日志本身不限量留，默认不读">最多 3 条 / 1500 字</p>
+      </div>
+    </div>
+    <div data-page-node-id="oHBnrtNBhGG47xY9sAH4uq" class="subhead">它怎么念</div>
+    <div data-page-node-id="BJ1eWgrtjM61yR6ORto4qz" class="row">
+      <div data-page-node-id="1VUpLpz2vYbqpvtm9NLyHI" class="row__label">出声</div>
+      <div data-page-node-id="jyeTB2q55BShzlXc1h7mxP" class="row__body">
+        <label data-page-node-id="qdDe7JT4t5n51U2N2oILWw" class="sw"><input data-page-node-id="QIUKzPYXneS9yABgPZRCCi" type="checkbox" id="cbTts" checked=""> 念出来</label>
+        <p data-page-node-id="9DngNvdeCRnhr7RtVZzaTy" class="hint" data-tip="出声、小窗显隐、能不能问，是三件互相独立的事">关掉 = 只出字不出声</p>
+      </div>
+    </div>
+    <div data-page-node-id="PpYy7jpY1f2Hy3LeYtDB9O" class="row">
+      <div data-page-node-id="OFAwm1aI0DxmLV6xzi7wfm" class="row__label">引擎</div>
+      <div data-page-node-id="woezIpAv5TFgl987pNWjCr" class="row__body">
+        <select data-page-node-id="ebfggxcMxSmlhGN3TwslZC" id="selTtsEngine">
+          <option data-page-node-id="GQdEufMwmel8LtBgLrNFVx" value="auto">自动：联网用 Edge，断网落系统语音（推荐）</option>
+          <option data-page-node-id="PbQCw03OdJgYuuy0Qcxh7G" value="edge_tts">只用 Edge 在线（音质好，断网就不出声）</option>
+          <option data-page-node-id="sGUhG3wWj3KuaXLe0BSxO7" value="sapi_fallback">只用系统语音（始终离线，偏机械）</option>
+          <option data-page-node-id="JlfvRh23pqnb7dOPH160K0" value="offline_xiaoxiao">本地自然人声（需自行装语音包，断网可用）</option>
+        </select>
+        <p data-page-node-id="OqhFtKbtUVuQ0AEsQBiPsC" class="hint" data-tip="Edge 联网自然、系统语音离线机械；第三档需自行装语音包，页面会自动探测" id="ttsProbe">自带 Edge + 系统语音；第三档自动探测</p>
+      </div>
+    </div>
+    <div data-page-node-id="W9lOGAY6jZjQxsA6rdEj89" class="row">
+      <div data-page-node-id="SFNynCgV2MKSszWMcdMNAJ" class="row__label">音色 / 语速</div>
+      <div data-page-node-id="A2ohmaO3oEcnICMtYcNM0N" class="row__body">
+        <div data-page-node-id="wNvtKLV4QnGzX4dUBMGfwY" class="inline">
+          <select data-page-node-id="Ut1i27Rv9F1mUn5bQkCH16" id="selVoice" style="flex:1 1 150px">
+            <option data-page-node-id="C53nDF9bVFICapxqQHtRBT" value="Xiaoxiao">晓晓 · 女声 · Edge</option>
+            <option data-page-node-id="KRxMihV6SCm0vtOqgNHIAu" value="Yunxi">云希 · 男声 · Edge</option>
+            <option data-page-node-id="fcAHvDPHkYEPBgLxF6plQ9" value="Huihui">慧慧 · 女声 · 系统</option>
+          </select>
+          <input data-page-node-id="wEhyw3trWfrXATqiDDufty" type="text" value="1" id="inSpeed" inputmode="numeric" style="flex:0 0 66px"><span data-page-node-id="gyYi3cMb9CE4oXweofWGfa" class="hint">档位，1≈1.2 倍速</span>
+          <button data-page-node-id="bJJ0qL3GnXUboZZIE0YNw8" class="btn btn--sm" id="btnTryVoice">试听</button>
+        </div>
+        <p data-page-node-id="I9LYFcSTwzUrd4UXF9E1QR" class="hint" data-tip="Edge/系统语音用固定表；本地自然人声列本机探测到的离线音色" id="voiceHint">选完下一句生效</p>
+      </div>
+    </div>
+    <div data-page-node-id="QaB61NV9Nn0Iyh8DVCSrHt" class="row">
+      <div data-page-node-id="GYta0HfHteGZwXgJlVioCu" class="row__label">分句流式</div>
+      <div data-page-node-id="TMSWLbsiwIZsNXEn4omGec" class="row__body">
+        <label data-page-node-id="riGFbMARueI5GwvO5tAyhD" class="sw"><input data-page-node-id="y37ODPOiLkLjIscpFtGLa1" type="checkbox" checked=""> 第一句合成完就开口</label>
+        <p data-page-node-id="ZCEEy0Iod0i9OX4K6nzs1L" class="hint" data-tip="首字 4.07s → 1.46s；关掉要等整段合成完，长回答明显变慢">边合成边播，首字更快</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 桌宠显示（原「气泡与浮层」；打字提问挪到这，因为它管的是小窗上多出来的那条输入框） -->
+  <div data-page-node-id="NDDF84oKVyRDbHhieLCzX6" class="card">
+    <h3 data-page-node-id="9K56dDeCQUuJZ5BG5ga52H" class="card__title">桌宠显示</h3>
+    <div data-page-node-id="Y3gUX4gcBz9u113YtQD05L" class="row">
+      <div data-page-node-id="WC72QzE85gwuD70QYtA7Tv" class="row__label">气泡样式</div>
+      <div data-page-node-id="GghSNAjpRSEG2HiMSlnpDh" class="row__body">
+        <div data-page-node-id="G4HKMLhfaqLKfpv3vsTArg" class="inline">
+          <select data-page-node-id="0dz3uA8yxEfVpCdgteJfkb" data-def="classic" id="selBubble" style="flex:1 1 160px"><option data-page-node-id="2k3rA4PaDuyaYq45tA0Ks2" value="classic">经典暗色（默认）</option><option data-page-node-id="mrfssOKwoRovnPBsOvkeu3" value="comic">漫画对白</option><option data-page-node-id="U8hmqhM3CevaaCnEc3gXZx" value="glass">毛玻璃</option><option data-page-node-id="lDxcM5ksEDLCgNWwAxKqkw" value="hud">游戏 HUD</option><option data-page-node-id="IK1GltMX4dV4ZIL3ztyuzY" value="plain">纯文字</option></select>
+          <button data-page-node-id="rIsZdMbcaWg1TptcQ5Jwiy" class="btn btn--sm js-def" data-for="selBubble">恢复默认</button>
+        </div>
+      </div>
+    </div>
+    <div data-page-node-id="MiujuUtfxnp9anWH5LcbAt" class="row">
+      <div data-page-node-id="sDku8GOBiEXBIeEm2oBFQW" class="row__label">字号 / 宽度</div>
+      <div data-page-node-id="o2CbBaB7QFp8GMEQplQ6BX" class="row__body">
+        <div data-page-node-id="MWS8mBHhDUOJo1qjiSqiXv" class="inline">
+          <input data-page-node-id="a1dPPzI7Cxje6fQCfQy7Io" type="text" value="13" id="inFont" data-def="13" inputmode="numeric" style="flex:0 0 64px"><span data-page-node-id="D9E1lqGNX9Vezn5b7VkNzs" class="hint">px</span>
+          <input data-page-node-id="2kHerR4fkWJkBHhbdDD5LN" type="text" value="300" id="inWidth" data-def="300" inputmode="numeric" style="flex:0 0 76px"><span data-page-node-id="7yfxQn6fu8kopj97LIu92w" class="hint">px 最大宽度</span>
+          <button data-page-node-id="HJqVJ1a1e2Q8AIKJ2wiOyC" class="btn btn--sm js-def" data-for="inFont,inWidth">恢复默认</button>
+        </div>
+        <p data-page-node-id="q0mGTVprMCJBG5w11yh7zn" class="hint" data-tip="小窗里仍受窗口宽度约束">范围 11–20 / 160–640</p>
+      </div>
+    </div>
+    <div data-page-node-id="t0mO3O3LBLP0f26HCPxn00" class="row">
+      <div data-page-node-id="ja7E0i3EVy3Xb1BkcaesCh" class="row__label">小窗尺寸</div>
+      <div data-page-node-id="SPzuIgeNrkfK2F2q5f1tJ7" class="row__body">
+        <div data-page-node-id="i6SyZahXjPqdjbyuoXXEGd" class="inline">
+          <input data-page-node-id="d3qwEevRj4sKY62fMxfzGs" type="text" value="340" id="inWinW" data-def="340" inputmode="numeric" style="flex:0 0 72px"><span data-page-node-id="FzFn2kWwUuFcKcuffNkckC" class="hint">×</span>
+          <input data-page-node-id="neJdbVxikKy45wUGGA0jSR" type="text" value="360" id="inWinH" data-def="360" inputmode="numeric" style="flex:0 0 72px"><span data-page-node-id="lgPf1tCgFAG4wv7sDpEhDV" class="hint">逻辑像素</span>
+          <button data-page-node-id="6Xq9G5hvTgICieDIaaKm0l" class="btn btn--sm js-def" data-for="inWinW,inWinH">恢复默认</button>
+        </div>
+        <p data-page-node-id="d76bCHiVCAZOIZ5RyKTqym" class="hint" data-tip="超过当前屏幕工作区时会自动压到屏内，见下方「小窗位置」">改完重启小窗</p>
+      </div>
+    </div>
+    <div data-page-node-id="T7ZqPo6G6oRvqjy8G4w06u" class="row">
+      <div data-page-node-id="xfcCZUivFeKldOAcK05tXu" class="row__label">显示 / 隐藏</div>
+      <div data-page-node-id="XlQQ7G2jsAtU2zylAhDReP" class="row__body">
+        <div data-page-node-id="aA6SZv0x6W57IO3XTa4Aal" class="inline">
+          <div data-page-node-id="q6Efceq99TBrNRUDRmy44B" class="hk-cell" style="flex:0 0 210px">
+            <label data-page-node-id="ESiMzuFORiHfhmG7TRYnby" class="hk-on"><input data-page-node-id="rQmsTcYWszoTHGnmlGeK7O" type="checkbox" data-hk-on="toggle" checked=""> 显示/隐藏小窗</label>
+            <input data-page-node-id="Y9lsolRUKiFfPCbV7U8tdc" type="text" value="Ctrl + Alt + H" readonly="" data-hk="toggle">
+            <span data-page-node-id="tyABhStlHXTN5UUpZQto1R" class="pill pill--warn" id="toggleBusy" style="display:none;align-self:flex-start">被占用，未生效</span>
+          </div>
+        </div>
+        <p data-page-node-id="36bk3ei2M60n45PRvYjFkI" class="hint" data-tip="小窗是所有气泡的总闸；收起后屏幕不出现任何字，自动开口也照念不弹泡"><b>收起 = 不弹字，仍能问、能念</b></p>
+        <p data-page-node-id="iYePB41PaOq42cuxYnxLoM" class="hint" data-tip="单键会和游戏抢键，建议用 Ctrl+Alt+ 这类组合">再按一下叫回 · <b>别用单键</b></p>
+      </div>
+    </div>
+    <div data-page-node-id="if6Ep5yJU5TkFPCHtFElWq" class="row">
+      <div data-page-node-id="DFPrqgGGPldQmBNyx5oDDJ" class="row__label">小窗位置</div>
+      <div data-page-node-id="KWLgOht8YyypAQB56lDZWT" class="row__body">
+        <div data-page-node-id="E6eD8Nr3IWbVcGFpZCySJ7" class="inline">
+          <span data-page-node-id="tInNcwJDXPS7hmv9YiTlZ9" class="pill" id="posPill">上次 (1916, 1056) · 屏内</span>
+          <button data-page-node-id="2ydL6ZPuPc3oMOGXCDJmof" class="btn btn--sm" id="btnPosReset">回到右下角</button>
+        </div>
+        <p data-page-node-id="UnAzjDVEtpaHAfepr7BOnU" class="hint" data-tip="默认贴主屏右下角；换分辨率或拔掉副屏后，屏外坐标会自动拉回最近屏幕">拖动即记住位置</p>
+        <p data-page-node-id="g6eoj0owbLER88AfDn4wtp" class="hint" data-tip="坐标不在任何屏幕内，已拉回右下角；小窗尺寸超过工作区也已压缩" id="posWarn" style="display:none;color:var(--warn)">坐标/尺寸已自动修正到屏内</p>
+      </div>
+    </div>
+    <div data-page-node-id="DVY4rG4PkElusNgqbhQ2bz" class="subhead">打字问它</div>
+    
+    <div data-page-node-id="JrVHKGFIDgEf9Wushaf8UZ" class="preview" id="typePreview">
+      <div data-page-node-id="SGft6BV6OUBTDBgOowdYU7" class="preview__t">按 Ctrl + Alt + T 后，小窗顶部会多出这一条 · 仅示意，不是真输入框</div>
+      <div data-page-node-id="XA5HU30WBuV70jHQNaYfEK" class="winmock">
+        <div data-page-node-id="EETDVlGvg8ASrdWb91nbA9" class="typebar">
+          <input data-page-node-id="vNq5pXCV5lGNFFm4Db3wDF" type="text" id="typeDemo" placeholder="问它点什么…（Enter 发送，Esc 取消）">
+          <button data-page-node-id="vDnBMHIJDIj1JZpCFLMtGD" class="btn btn--primary btn--sm" id="btnTypeSend">发</button>
+        </div>
+        <div data-page-node-id="ORwZQjCbKTSGpeNiDuhHCW" class="winmock__pet">桌宠本体在这里，输入时不会缩小也不会被盖住</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 它怎么说话 -->
+  <div data-page-node-id="xWkGFFbSXAbtxsNDPnNef4" class="card">
+    <h3 data-page-node-id="GfR2B8asOnjm1fCG2hhKBR" class="card__title">它怎么说话</h3>
+    <div data-page-node-id="jTzgBxodhjsrdfafFimLWH" class="row">
+      <div data-page-node-id="V4Et07gb6STlrpOSZqm6AX" class="row__label">人设</div>
+      <div data-page-node-id="F2wRLxB6ERO2zlQRKtHEPY" class="row__body">
+        <textarea data-page-node-id="FSWzH83oWI1nXe7yZOsGwy" placeholder="留空 = 用内置那套：完整句 / 算数只给结论 / 禁 Markdown"></textarea>
+        <p data-page-node-id="jwAvsSYCBTRREtEuFwu63Y" class="hint" data-tip="「看不到画面要说出来」是硬规则，不在这里改，也不会被覆盖">只改语气；看不到画面必须说</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 高级 -->
+  <div data-page-node-id="BgGBkzHdEhUFgbtXLyrBpm" class="advbar">
+    <label data-page-node-id="k4Mb2KEXptreWwIOqE5DWA" class="sw" style="font-size:13px;font-weight:600"><input data-page-node-id="O7AoD3sxCKXlsaBfPWSKRv" type="checkbox" id="cbAdv"> 高级选项</label>
+    <span data-page-node-id="qboA9VOcCKby2AhuurPwlN" class="advbar__t">自动开口 · 独立识图端 · DSH 会话模型通道</span>
+  </div>
+
+  <div data-page-node-id="6Cf7njYX50yGdD3KT1hJf0" class="advanced" id="advanced">
+
+    <!-- ⑥ 自动开口 -->
+    <details data-page-node-id="72EqiQjJCd6eVG4B5G0LSm" class="group" id="gAuto">
+      <summary data-page-node-id="hUoTSBFviL6prPWsUtWBJU"><span data-page-node-id="8IDcvCXc6FgtsdAo7BkpRm" class="dot"></span>自动开口<span data-page-node-id="E2op8gVAynOtd5zwbnFNQJ" class="tag">默认关</span><span data-page-node-id="vhaWJZ3DBr8p7DW3Yof79n" class="chev">▸</span></summary>
+      <div data-page-node-id="ypY6dOuxxaUDRu0rgpxuPH" class="group__body">
+        <p data-page-node-id="BPmgoxMAlott3HYIlChSx5" class="note">它自己隔一会儿冒一句吐槽用这套。<b data-page-node-id="jIXutm4eAlgdeunELGrlck">触发方式独立</b>（定时 vs 按 Caps Lock），但<b data-page-node-id="7bsU4mj9OhDimJtri4jfAK">模型和识图判定共用上面 ① 那套</b>，不再单独配。</p>
+        <div data-page-node-id="13lRmUhAQlnHVlWur0Enqm" class="row">
+          <div data-page-node-id="AtgWgQkCedC8eAsI2idAKy" class="row__label">总开关</div>
+          <div data-page-node-id="z5MsF59Vws6xD3cja1VCHj" class="row__body"><label data-page-node-id="sBPLfhqFcHEvKDgcPZmHrE" class="sw"><input data-page-node-id="QRaIMUiJXzHc77jwceZEYT" type="checkbox" id="cbAuto"> 玩游戏时自动开口</label><p data-page-node-id="hYCW8mehYsEwUak1ne8DDI" class="hint">默认关。开了才会每 45 秒看一眼画面。</p></div>
+        </div>
+        <div data-page-node-id="xxN3YOZUVEZZhQgmLb56JQ" class="row">
+          <div data-page-node-id="tzoQ61GQHQyCIRUDi93UkN" class="row__label">节奏</div>
+          <div data-page-node-id="5b5yfFfEjllbXYiBI0x0I5" class="row__body"><div data-page-node-id="OxdhaYD1KG9C0DnDQThkwH" class="inline"><input data-page-node-id="0Q4HpgHuXTzEZkB2aRx7hO" type="text" value="45" style="flex:0 0 70px"><span data-page-node-id="x1h6lGi9AKlH2hlMYgjiBB" class="hint">秒说一句</span><input data-page-node-id="nCogWPB148HpDRTjSLDBwb" type="text" value="15" style="flex:0 0 70px"><span data-page-node-id="zEkJ7GFrUXydkhPEnsCy9s" class="hint">秒后才开口（刚开游戏不插嘴）</span></div></div>
+        </div>
+        <div data-page-node-id="EgDyBxUjeSZQsyfi7GJlPK" class="row">
+          <div data-page-node-id="TIN1IJYrpijd0UxhoAx4DD" class="row__label">哪些游戏算</div>
+          <div data-page-node-id="rokeTU3UvoQwYjJ693W7CX" class="row__body"><input data-page-node-id="GayQTxFSeegRarNy3lhQ5x" type="text" placeholder="进程名或窗口标题关键字，逗号分隔；留空 = 任何前台窗口都算"><p data-page-node-id="pi4V0rTmzAmur6QZh7cmx5" class="hint">空着连看视频也会跟你唠，慎用。</p></div>
+        </div>
+        <div data-page-node-id="yjmu4gk6nHkTByvyO0HJtX" class="row">
+          <div data-page-node-id="XE6wGudIAzl2vtZlo2eRdn" class="row__label">用哪个模型</div>
+          <div data-page-node-id="Ako1AM7pZ0hksGWTFi4O4E" class="row__body">
+            <div data-page-node-id="2E3W9V0iJvJslyRwosbC2i" class="inline"><span data-page-node-id="YB7grnjzEgl6UDloXB2Fw4" class="pill" id="autoModelPill">跟随「模型与能力」</span><a data-page-node-id="FCAR0hdjruMHYzMTjAttFv" id="lnkToModel" style="font-size:12px;color:var(--dsw-alias-brand-primary);cursor:pointer">去改 →</a></div>
+            <p data-page-node-id="tGnzYX8kulOzzOhyUNAK83" class="hint" data-tip="同一端点、同一识图判定；要换只改上面 ① 卡">与语音问答共用模型</p>
+            <p data-page-node-id="Jmc4t4F8Pe4FfIrLIUWC3q" class="hint" data-tip="坐标不在任何屏幕内，已拉回右下角；小窗尺寸超过工作区也已压缩" id="legacyHint" style="display:none">检测到旧配置，点「去改」统一</p>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- ⑦ 独立识图端 -->
+    <details data-page-node-id="10EWfbZrUMA2C3MfOEzl1C" class="group" id="gVision">
+      <summary data-page-node-id="vFSdqBvcnFtXnwzJ1yZxrT"><span data-page-node-id="Irq80ETKs0ohmwWfyMsJAI" class="dot" id="dotVision"></span>独立识图端<span data-page-node-id="KPDgUyDnu99eg9RgwFoKrr" class="tag">可选</span><span data-page-node-id="bNciDl72HfLr6EiNsTEusC" class="chev">▸</span></summary>
+      <div data-page-node-id="TLUS9UEV8KFBQhlBFQmoCM" class="group__body">
+        <p data-page-node-id="6heCw05Vpxt0QJZGE5YJaQ" class="note">主模型不会看图时，在这里挂一个专门看图的模型：它先把画面描述成文字，再交给主模型回答。留空也不影响文字问题。</p>
+        <div data-page-node-id="o2p1CQAw1qbrsbDzpIlm3S" class="row">
+          <div data-page-node-id="Q6os0gUpn8ZKVI0IvivGpD" class="row__label">启用</div>
+          <div data-page-node-id="lYSjWVNAJtb77msMrN4CHF" class="row__body"><label data-page-node-id="vafel3nM9H0Dm80JkaIx7t" class="sw"><input data-page-node-id="auYCrIxaAvH9fXQzXtoxj7" type="checkbox" id="cbVision"> 用这个端点识图</label><p data-page-node-id="bgk3QOq30r7pjhBusZsI4k" class="hint">关着 = 主模型又不会看图，就走盲答。</p></div>
+        </div>
+        <div data-page-node-id="h64utGaYE7IbbzMax9g8dc" class="row">
+          <div data-page-node-id="sejYRgPLhQuMG5RJYMyEef" class="row__label">端点</div>
+          <div data-page-node-id="n8EZkcT8RGnFSE5skEriZg" class="row__body"><input data-page-node-id="SSY6eH2u9Lv5DwuoDfWUuE" type="text" placeholder="http://127.0.0.1:11434/v1"></div>
+        </div>
+        <div data-page-node-id="dIPGTfiJfYIGVzCWKDyZGe" class="row">
+          <div data-page-node-id="ix97QqKtvN1sWkQA61RBsz" class="row__label">格式 / 模型</div>
+          <div data-page-node-id="dAtq2d8DybTLyTFck0XECb" class="row__body"><div data-page-node-id="4DozT8Kmwd803YEZLIAnBD" class="inline"><select data-page-node-id="CBD4CBF91ayQqsXK2wPo18" style="flex:0 0 180px"><option data-page-node-id="bFYEc3maHrHdWMx46bikKj">OpenAI 兼容</option><option data-page-node-id="AyTZG6nMjF4Ywko1KkQf0N">Anthropic</option></select><input data-page-node-id="d6scjWJ0kyP298bBq0QcQB" type="text" placeholder="例如 qwen2.5vl" style="flex:1 1 180px"></div></div>
+        </div>
+        <div data-page-node-id="4e3Bdg6lQQVjZjbsrAYgfw" class="row">
+          <div data-page-node-id="SqkXpUq7qMVzFf5nWD8Vk6" class="row__label">API Key</div>
+          <div data-page-node-id="nIEAI8mxpWXZGOIiGlvcv3" class="row__body"><input data-page-node-id="UTdlN3DCuFakk7cgsZ19qx" type="text" placeholder="留空 = 不需要"></div>
+        </div>
+        <div data-page-node-id="FaoNHNOt7l25aNoxnrDPaC" class="row">
+          <div data-page-node-id="tBHXbPSFCw5yZC5mkubtuw" class="row__label">一步式</div>
+          <div data-page-node-id="0VuHpipM0vglP8jzd80S0K" class="row__body"><label data-page-node-id="CUy2SwsLFo1XkIWVAaX2At" class="sw"><input data-page-node-id="doKT888fE5o2LL7Qy3uT3z" type="checkbox" id="cbOneShot"> 截图直接交给主模型看（推荐）</label><p data-page-node-id="dO7Bxh4CmnkBteNERrIWjc" class="hint" data-tip="让回答模型直接看图，无需单独识图服务。不支持时自动退回两步式，不会哑火">关掉才用单独的识图服务</p></div>
+        </div>
+      </div>
+    </details>
+
+    <!-- ⑧ DSH 会话模型通道 -->
+    <details data-page-node-id="QSyDctcLXmH7G4fHtBMlf5" class="group" id="gCloud">
+      <summary data-page-node-id="Hi6lmPb4THystJgcJ1cGrs"><span data-page-node-id="M3ygu57Ux9iJSPE9ZklkDD" class="dot" id="dotCloud"></span>DSH 会话模型通道<span data-page-node-id="WixWoa1w3tzs4eHSlfKH3G" class="tag">需账号</span><span data-page-node-id="A7kkXQXhslbZnF36CZg5cU" class="chev">▸</span></summary>
+      <div data-page-node-id="EWVwCxHU4pEZHAIY4LxFxW" class="group__body">
+        <p data-page-node-id="y8Ql1lTcy61gCHC3kWfIVJ" class="note">想在「来源」里选 DSH 当前会话模型才需要配这里。不配也能用——上面①填任意兼容端点即可。</p>
+        <div data-page-node-id="uYYXP3mnWL2aApjiWeSMHI" class="row">
+          <div data-page-node-id="XB9CKnUoQtZOw2GMXeTo2S" class="row__label">连接状态</div>
+          <div data-page-node-id="QgLLxIhwuZlCYiGZGD06Zo" class="row__body">
+            <div data-page-node-id="mVgTjEYVX6IguCnxWMMadl" class="inline"><span data-page-node-id="PPxgMEjKirFzjj27meQyGG" class="pill pill--bad">未连接</span><button data-page-node-id="7s8PtnKDSFwCZF1UF5PvHH" class="btn btn--sm">在 DSH 中连接模型服务</button></div>
+            <p data-page-node-id="M0iijdEX2cmCxIgFY3SQnj" id="wbHint" class="hint" data-tip="连上后显示账号与可用模型">正在检测连接状态…</p>
+          </div>
+        </div>
+        <div data-page-node-id="n0d1Bv4YVht95zrgMMmVk3" class="row">
+          <div data-page-node-id="rP3WAKxcWI4r0fKLBlqWcX" class="row__label">默认档位</div>
+          <div data-page-node-id="3BW65KhC19MxY0aJ8ZQamo" class="row__body"><select data-page-node-id="5PYkEMNuTWbhHiQ9BU3R31"><option data-page-node-id="zjjfX2eBKCoIjOieCkjqrS">DSH 会话模型（由 DSH 端决定）</option><option data-page-node-id="x8nca5OL7M04Io2TTMH2G5">跟随当前会话模型</option><option data-page-node-id="pOm1M5B3onnaEjJJKwcsAh">跟随当前对话的模型</option></select><p data-page-node-id="7y0uXcHswcbX0NJzs8X9t5" class="hint">只影响云端来源；选自定义端点时这一项不生效。</p></div>
+        </div>
+      </div>
+    </details>
+
+    <!-- ⑨ 对话日志 / 排障 -->
+    <details class="group" id="gLogs">
+      <summary><span class="tag">排障</span>对话日志 / 排障<span class="chev">▸</span></summary>
+      <div class="group__body">
+        <p class="note">遇到问题（没回答 / 看不到画面 / 播报没出声）时点开这里，按时间倒序看本机日志。<b>默认隐藏你说的话和模型回答</b>，要看原文请勾选下面的开关。</p>
+        <div class="inline" style="flex-wrap:wrap">
+          <select id="logSource" style="flex:0 0 auto">
+            <option value="copilot">主对话日志（问答 / 耗时 / 路由）</option>
+            <option value="bridge">播报桥日志（端口 / 跳过播报）</option>
+            <option value="runtime">按键守护输出（识别文字 / 崩溃栈）</option>
+            <option value="bridgeout">播报桥输出（stdout）</option>
+          </select>
+          <select id="logTail" style="flex:0 0 80px">
+            <option value="60">最近 60 条</option>
+            <option value="120" selected>最近 120 条</option>
+            <option value="300">最近 300 条</option>
+          </select>
+          <label class="sw" style="font-size:12px"><input type="checkbox" id="logPlain"> 显示原文</label>
+          <button class="btn btn--sm" id="btnLogRefresh">刷新</button>
+        </div>
+        <div id="logMeta" class="hint" style="margin:0">点开本组即自动加载；也可点「刷新」。</div>
+        <div id="logList" class="loglist"><div class="logempty">尚未加载。</div></div>
+        <div class="inline">
+          <button class="btn btn--sm" id="btnLogCopy">复制全部</button>
+          <button class="btn btn--sm" id="btnLogExport">导出 .log</button>
+          <span class="hint" data-tip="日志里可能含你问过的话；复制/导出前确认「显示原文」是否符合你的预期" style="margin:0">导出前注意隐私</span>
+        </div>
+      </div>
+    </details>
+
+  </div>
+
+  <p data-page-node-id="5p5lukku1W4gL9XMFOEFpw" class="foot">
+    常驻 4 卡 · 高级 4 组 · 首启向导 1 次<br data-page-node-id="Qd8DUBkWssGkDLy3UW6efH">
+    折叠规则：只在「判不出能力 / 通道异常」时才自动展开对应组，其余永远收起
+  </p>
+</div>
+
+<script data-page-node-id="Sszc1q8QC6s7hIn4fZEQyK" data-pnid-children="g2g74RDX3Y2FcHXvC5Cq1I">
+(function () {
+  var html = document.documentElement;
+  var cbAdv = document.getElementById('cbAdv');
+  var adv = document.getElementById('advanced');
+  var wizard = document.getElementById('wizard');
+  var cbWizard = document.getElementById('cbWizard');
+  var bannerBlind = document.getElementById('bannerBlind');
+  var bannerTwo = document.getElementById('bannerTwo');
+  var probeOut = document.getElementById('probeOut');
+  var btnProbe = document.getElementById('btnProbe');
+  var cbVision = document.getElementById('cbVision');
+  var dotVision = document.getElementById('dotVision');
+  var dotCloud = document.getElementById('dotCloud');
+  var gVision = document.getElementById('gVision');
+  var gCloud = document.getElementById('gCloud');
+  var gAuto = document.getElementById('gAuto');
+  var cap = 'vision';
+  var probed = false;
+
+  // 主题
+  document.querySelectorAll('input[name="theme"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      html.setAttribute('data-theme', r.value);
+    });
+  });
+
+  // 演示：接入的模型能力
+  document.querySelectorAll('input[name="cap"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      cap = r.value;
+      probed = false;
+      probeOut.textContent = '';
+      sync();
+    });
+  });
+
+  // 高级总开关
+  cbAdv.addEventListener('change', function () {
+    adv.dataset.on = cbAdv.checked ? '1' : '0';
+    if (!cbAdv.checked) { gVision.open = false; gCloud.open = false; }
+  });
+
+  // 首启向导
+  cbWizard.addEventListener('change', function () {
+    wizard.dataset.on = cbWizard.checked ? '1' : '0';
+  });
+
+  // 探针（模拟）
+  btnProbe.addEventListener('click', function () {
+    var digits = String(Math.floor(1000 + Math.random() * 9000));
+    probeOut.style.color = 'var(--dsw-alias-text-secondary)';
+    probeOut.textContent = '正在发一张随机数字图（' + digits + '）…';
+    btnProbe.disabled = true;
+    setTimeout(function () {
+      btnProbe.disabled = false;
+      if (cap === 'vision') {
+        probeOut.style.color = 'var(--ok)';
+        probeOut.textContent = '能看图 · 随机数字 ' + digits + ' ✓ 1.9s';
+      } else {
+        probeOut.style.color = 'var(--bad)';
+        probeOut.textContent = '只能出文字 · 随机数字 ' + digits + ' ✗（HTTP 415）';
+      }
+      probed = true;
+      sync();
+      // 判定结果出来了，若主模型看不到画面且没配识图端 → 自动展开高级并定位
+      if (cap === 'text' && !cbVision.checked) {
+        cbAdv.checked = true;
+        adv.dataset.on = '1';
+        gVision.open = true;
+        setTimeout(function () {
+          gVision.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 60);
+      }
+    }, 900);
+  });
+
+  cbVision.addEventListener('change', sync);
+
+  document.getElementById('lnkToVision').addEventListener('click', function () {
+    cbAdv.checked = true;
+    adv.dataset.on = '1';
+    gVision.open = true;
+    gVision.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  function sync() {
+    var blind = (cap === 'text') && !cbVision.checked;
+    var two = (cap === 'text') && cbVision.checked;
+    bannerBlind.dataset.on = blind ? '1' : '0';
+    bannerTwo.dataset.on = two ? '1' : '0';
+    // 红点：折叠状态下也能看出「里面有话说」
+    dotVision.dataset.on = blind ? '1' : '0';
+    dotCloud.dataset.on = '1'; // 云端未连接，常态提醒
+    if (two) { dotVision.dataset.on = '0'; }
+  }
+
+  // 云端默认未连接 → 红点常亮
+  sync();
+
+  // ── 运行状态条 ────────────────────────────────────────────────
+  // 以前这里是原型演示：点按钮 700ms 后把灯点绿、PID 写死 20344，
+  // 实际 Python 守护崩了也照样显示"已启动"。现在状态一律来自后端真查进程。
+  var btnRun = document.getElementById('btnRun');
+  var ledPtt = document.getElementById('ledPtt');
+  var ledBridge = document.getElementById('ledBridge');
+  var txtPtt = document.getElementById('txtPtt');
+  var txtBridge = document.getElementById('txtBridge');
+  var runMeta = document.getElementById('runMeta');
+  var cbAuto = document.getElementById('cbAuto');
+
+  // ── 小窗显隐：跟「启动副驾」完全独立（小窗由插件起，不依赖 ptt_voice） ──
+  var ledWin = document.getElementById('ledWin');
+  var txtWin = document.getElementById('txtWin');
+  var btnWin = document.getElementById('btnWin');
+  var winShown = true;
+
+  function paintWin() {
+    if (winShown) {
+      ledWin.dataset.on = '1';
+      txtWin.textContent = '小窗 显示中';
+      btnWin.textContent = '隐藏小窗';
+    } else {
+      ledWin.dataset.on = '0';
+      txtWin.textContent = '小窗 已收起（只出声）';
+      btnWin.textContent = '显示小窗';
+    }
+  }
+  btnWin.addEventListener('click', function () { winShown = !winShown; paintWin(); });
+  paintWin();
+
+  // 输入条预览：点「发」或按 Enter 给一句假反馈，免得像个坏按钮
+  var typeDemo = document.getElementById('typeDemo');
+  var TYPEPH = '问它点什么…（Enter 发送，Esc 取消）';
+  function fakeSend() {
+    var v = (typeDemo.value || '').trim();
+    if (!v) { typeDemo.focus(); return; }
+    typeDemo.value = '';
+    typeDemo.placeholder = '已发送「' + (v.length > 14 ? v.slice(0, 14) + '…' : v) + '」→ 答案出在气泡里';
+    setTimeout(function () { typeDemo.placeholder = TYPEPH; }, 2800);
+  }
+  document.getElementById('btnTypeSend').addEventListener('click', fakeSend);
+  typeDemo.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); fakeSend(); }
+    if (e.key === 'Escape') { typeDemo.value = ''; typeDemo.blur(); }
+  });
+
+  // 「用哪个模型」跟着 ① 的模型名走，证明它是同一份配置
+  var mdlName = document.getElementById('mdlName');
+  var autoModelPill = document.getElementById('autoModelPill');
+  var srcSel = document.getElementById('srcSel');
+  var httpFields = document.getElementById('httpFields');
+  var cloudFields = document.getElementById('cloudFields');
+  var cloudModel = document.getElementById('cloudModel');
+
+  function modelLabel() {
+    if (srcSel.value === 'dsh') {
+      return cloudModel.options[cloudModel.selectedIndex].text.replace(/（.*$/, '');
+    }
+    return mdlName.value || '（未填）';
+  }
+  function syncPill() {
+    autoModelPill.textContent = modelLabel() + '（同「模型与能力」）';
+  }
+  function applySource() {
+    var dsh = srcSel.value === 'dsh';
+    // 能力探针只探自定义 HTTP 端点；dsh 走 DSH 会话登录态，
+    // 没有 baseURL/Key 可探，按钮会误报"看不了图"——整块收起。
+    var probeArea = document.getElementById('probeArea');
+    var btnProbe = document.getElementById('btnProbe');
+    var probeHint = document.getElementById('probeHint');
+    var probeDshHint = document.getElementById('probeDshHint');
+    if (probeArea) probeArea.style.opacity = dsh ? '.5' : '1';
+    if (btnProbe) btnProbe.disabled = dsh;
+    if (probeHint) probeHint.style.display = dsh ? 'none' : '';
+    if (probeDshHint) probeDshHint.style.display = dsh ? '' : 'none';
+    var probeOutEl = document.getElementById('probeOut');
+    if (probeArea) probeArea.classList.toggle('is-off', dsh);
+    if (dsh && probeOutEl) probeOutEl.textContent = '';
+    httpFields.style.display = dsh ? 'none' : 'flex';
+    cloudFields.style.display = dsh ? 'flex' : 'none';
+    var srcHint = document.getElementById('srcHint');
+    srcHint.textContent = dsh ? '走 DSH 登录态，无 baseURL / Key' : '本地与云端填同一格，只是地址不同';
+    srcHint.dataset.tip = dsh
+      ? '走 DSH 登录态，没有 baseURL 和 Key 可填；选这项前先在高级里连一次'
+      : 'llama.cpp / Ollama / LM Studio 和云端 OpenAI 兼容 API 都用 baseURL';
+    syncPill();
+  }
+  mdlName.addEventListener('input', syncPill);
+  cloudModel.addEventListener('change', syncPill);
+  srcSel.addEventListener('change', applySource);
+  applySource();
+
+  document.getElementById('lnkToModel').addEventListener('click', function () {
+    document.getElementById('mdlName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('mdlName').focus();
+  });
+
+  // 「Ollama 示例」只是快捷填充，不是第三种来源
+  document.getElementById('btnEpLocal').addEventListener('click', function () {
+    document.getElementById('epUrl').value = 'http://127.0.0.1:11434/v1';
+    document.getElementById('epUrl').focus();
+  });
+
+  // ── 热键捕获：点格子 → 按一个键（可带修饰键）→ 立刻写入，冲突拒绝 ──
+  var hkWarn = document.getElementById('hkWarn');
+  var recording = null;
+  var HK_NAMES = { ptt: '按住说话', type: '打字提问', ask: '问当前画面', clip: '念剪贴板', exit: '退出守护', toggle: '显示/隐藏小窗' };
+
+  function keyName(e) {
+    var c = e.code || '';
+    if (c === 'CapsLock') return 'Caps Lock';
+    if (c === 'Space') return '空格';
+    if (c === 'Backquote') return '` ~';
+    if (c === 'Tab') return 'Tab';
+    if (/^(Control|Alt|Shift)(Left|Right)$/.test(c) || c === 'MetaLeft' || c === 'MetaRight') return null;
+    var m;
+    if ((m = /^Key([A-Z])$/.exec(c))) return m[1];
+    if ((m = /^Digit(\d)$/.exec(c))) return m[1];
+    if ((m = /^F(\d{1,2})$/.exec(c))) return 'F' + m[1];
+    if (e.key && e.key.length === 1) return e.key.toUpperCase();
+    return null;
+  }
+
+  function startRecord(el) {
+    if (!el || el.disabled) return; // 没启用的热键不让录
+    if (recording) recording.dataset.rec = '0';
+    if (!el.dataset.prev) el.dataset.prev = el.value;
+    recording = el;
+    el.dataset.rec = '1';
+    el.value = '按下要用的键…（Esc 取消）';
+    hkWarn.style.display = 'none';
+  }
+
+  document.querySelectorAll('[data-hk]').forEach(function (el) {
+    el.addEventListener('click', function () { startRecord(el); });
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (!recording) return;
+    e.preventDefault(); e.stopPropagation();
+    var el = recording;
+    if (e.code === 'Escape' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+      recording = null; el.dataset.rec = '0';
+      el.value = el.dataset.prev || '（未设置）';
+      return;
+    }
+    var k = keyName(e);
+    if (!k) return; // 只按了修饰键，继续等
+    var mods = [];
+    if (e.ctrlKey) mods.push('Ctrl');
+    if (e.altKey) mods.push('Alt');
+    if (e.shiftKey) mods.push('Shift');
+    var lab = mods.concat([k]).join(' + ');
+    var clash = null;
+    document.querySelectorAll('[data-hk]').forEach(function (o) {
+      if (o.disabled) return; // 没启用的热键不参与冲突检查
+      if (o !== el && o.value.toUpperCase() === lab.toUpperCase()) clash = HK_NAMES[o.dataset.hk] || '其他热键';
+    });
+    recording = null; el.dataset.rec = '0';
+    if (clash) {
+      el.value = el.dataset.prev || '（未设置）';
+      hkWarn.style.display = 'block';
+      hkWarn.textContent = '和「' + clash + '」重复了，没有保存。换个键，或先把那一个改掉。';
+      return;
+    }
+    el.dataset.prev = lab; el.value = lab;
+    hkWarn.style.display = 'none';
+  }, true);
+
+  document.addEventListener('mousedown', function (e) {
+    if (!recording || (e.button !== 3 && e.button !== 4)) return;
+    e.preventDefault(); e.stopPropagation();
+    var el = recording; recording = null; el.dataset.rec = '0';
+    var lab = '鼠标侧键 ' + (e.button === 3 ? '1（后退）' : '2（前进）');
+    el.dataset.prev = lab; el.value = lab;
+  }, true);
+
+  document.getElementById('btnHkReset').addEventListener('click', function () {
+    var el = document.getElementById('hkPtt');
+    el.dataset.prev = 'Caps Lock'; el.value = 'Caps Lock';
+    hkWarn.style.display = 'none';
+  });
+
+  // ── 语音：出声关掉 → 引擎/音色/语速一起置灰；只留系统语音时音色锁到慧慧 ──
+  var cbTts = document.getElementById('cbTts');
+  var selEngine = document.getElementById('selTtsEngine');
+  var selVoice = document.getElementById('selVoice');
+  var inSpeed = document.getElementById('inSpeed');
+  var btnTryVoice = document.getElementById('btnTryVoice');
+  var probeHint = document.getElementById('ttsProbe');
+  var voiceHint = document.getElementById('voiceHint');
+
+  // 「本地自然人声」的二次菜单：列本机真实装好的离线音色，而不是写死几个 token。
+  // 独立打开 HTML（演示模式）时给一组示例；接了后端就由 /tts/probe 覆盖。
+  var demoNative = [
+    { token: 'Xiaoxiao', desc: 'Microsoft Xiaoxiao (Natural HD) - Chinese (Simplified, China)' },
+    { token: 'Huihui', desc: 'Microsoft Huihui Desktop - Chinese (Simplified)' },
+  ];
+  var hasBackend = !!(new URLSearchParams(location.search).get('port') || (location.port && location.port !== '80'));
+  var nativeVoices = hasBackend ? [] : demoNative.slice();
+  var voiceOptionsDefault = selVoice.innerHTML;
+
+  function renderVoices() {
+    if (selEngine.value !== 'offline_xiaoxiao') {
+      if (selVoice.innerHTML !== voiceOptionsDefault) selVoice.innerHTML = voiceOptionsDefault;
+      if (voiceHint) voiceHint.textContent = '选完下一句生效';
+      return;
+    }
+    selVoice.innerHTML = '';
+    if (!nativeVoices.length) {
+      var o0 = document.createElement('option');
+      o0.value = '';
+      o0.textContent = '（本机没有离线音色，需先装语音包）';
+      selVoice.appendChild(o0);
+      if (voiceHint) voiceHint.textContent = '需先装语音包';
+      return;
+    }
+    nativeVoices.forEach(function (v) {
+      var o = document.createElement('option');
+      o.value = v.token;
+      o.textContent = v.desc + ' · 离线';
+      selVoice.appendChild(o);
+    });
+    if (voiceHint) voiceHint.textContent = '本机离线音色，已排除桥接';
+  }
+
+  function syncVoice() {
+    renderVoices();
+    var sapi = selEngine.value === 'sapi_fallback';
+    Array.prototype.forEach.call(selVoice.options, function (o) {
+      var isSapi = o.text.indexOf('系统') >= 0;
+      o.disabled = sapi && !isSapi;
+    });
+    if (sapi && selVoice.options[selVoice.selectedIndex] && selVoice.options[selVoice.selectedIndex].disabled) {
+      selVoice.selectedIndex = 2; // 慧慧
+    }
+    var off = !cbTts.checked;
+    selEngine.disabled = off;
+    selVoice.disabled = off;
+    inSpeed.disabled = off;
+    btnTryVoice.disabled = off;
+  }
+  cbTts.addEventListener('change', syncVoice);
+  selEngine.addEventListener('change', syncVoice);
+  syncVoice();
+
+  btnTryVoice.addEventListener('click', function () {
+    var old = btnTryVoice.textContent;
+    btnTryVoice.disabled = true; btnTryVoice.textContent = '念着呢…';
+    setTimeout(function () { btnTryVoice.textContent = old; syncVoice(); }, 1500);
+  });
+
+  // ── 恢复默认：按钮把 data-def 写回对应输入框，并闪一下边框作反馈 ──
+  document.querySelectorAll('.js-def').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      btn.dataset.for.split(',').forEach(function (id) {
+        var el = document.getElementById(id.trim());
+        if (!el) return;
+        el.value = el.dataset.def;
+        el.classList.remove('flash');
+        void el.offsetWidth; // 强制重排，让动画能重复播
+        el.classList.add('flash');
+      });
+    });
+  });
+
+  // ── 小窗位置：一键回右下角 ──
+  var posPill = document.getElementById('posPill');
+  var posWarn = document.getElementById('posWarn');
+  var btnPosReset = document.getElementById('btnPosReset');
+  btnPosReset.addEventListener('click', function () {
+    posPill.textContent = '右下角（默认）· 屏内';
+    posPill.className = 'pill pill--ok';
+    posWarn.style.display = 'none';
+    btnPosReset.textContent = '已回到右下角';
+    setTimeout(function () { btnPosReset.textContent = '回到右下角'; }, 1400);
+  });
+
+  // 单个热键的启用开关：关掉 = 整条不注册，输入框置灰且不参与冲突检查
+  document.querySelectorAll('[data-hk-on]').forEach(function (cb) {
+    var el = document.querySelector('[data-hk="' + cb.dataset.hkOn + '"]');
+    function apply() { if (el) el.disabled = !cb.checked; }
+    cb.addEventListener('change', apply);
+    apply();
+  });
+
+  // 直接看某个状态：地址栏加 #dark / #adv / #blind（可叠加，如 #dark,adv）
+  var hash = (location.hash || '').toLowerCase();
+  if (hash.indexOf('dark') >= 0) {
+    html.setAttribute('data-theme', 'dark');
+    document.querySelector('input[name="theme"][value="dark"]').checked = true;
+  }
+  if (hash.indexOf('adv') >= 0) {
+    cbAdv.checked = true;
+    adv.dataset.on = '1';
+  }
+  if (hash.indexOf('blind') >= 0) {
+    document.querySelector('input[name="cap"][value="text"]').checked = true;
+    document.querySelector('input[name="capmode"][value="text"]').checked = true;
+    cap = 'text';
+    sync();
+    if (hash.indexOf('vision') >= 0) {
+      cbVision.checked = true;
+      sync();
+    } else {
+      // 与「测一下」判成只能出文字后的行为一致：自动展开高级并定位到识图端
+      cbAdv.checked = true;
+      adv.dataset.on = '1';
+      gVision.open = true;
+    }
+  }
+  if (hash.indexOf('legacy') >= 0) {
+    document.getElementById('legacyHint').style.display = 'block';
+  }
+  if (hash.indexOf('auto') >= 0) {
+    cbAdv.checked = true;
+    adv.dataset.on = '1';
+    gAuto.open = true;
+  }
+  if (hash.indexOf('run') >= 0) {
+    running = true;
+    paintRunning(hhmm());
+    btnRun.textContent = '停止';
+    btnRun.className = 'btn';
+  }
+  if (hash.indexOf('dsh') >= 0) {
+    srcSel.value = 'dsh';
+    applySource();
+  }
+  if (hash.indexOf('hkoff') >= 0) {
+    var cbClip = document.querySelector('[data-hk-on="clip"]');
+    if (cbClip) { cbClip.checked = false; cbClip.dispatchEvent(new Event('change')); }
+  }
+  // #loc：小窗坐标被夹回的异常态（换分辨率/拔副屏后的样子）
+  if (hash.indexOf('loc') >= 0) {
+    posPill.textContent = '上次 (-2048, 2310) · 屏外 → 已拉回';
+    posPill.className = 'pill pill--warn';
+    posWarn.style.display = 'block';
+  }
+  // #hidden：小窗收起态（只出声不出字）
+  if (hash.indexOf('hidden') >= 0 && hash.indexOf('hkoff') < 0) {
+    winShown = false;
+    paintWin();
+    // #hidden,mute：再叠一个"语音也关着"的死局态
+    if (hash.indexOf('mute') >= 0) {
+      var bm = document.getElementById('bannerMute');
+      if (bm) bm.style.display = 'flex';
+    }
+  }
+  // #sapi：引擎切到「只用系统语音」，音色锁死慧慧
+  if (hash.indexOf('sapi') >= 0) {
+    selEngine.value = 'sapi_fallback';
+    syncVoice();
+  }
+  // #ttsnative：本地自然人声的二次菜单（演示用；真后端下由 /tts/probe 覆盖数据）
+  if (hash.indexOf('ttsnative') >= 0) {
+    selEngine.value = 'offline_xiaoxiao';
+    nativeVoices = [
+      { token: 'Xiaoxiao', desc: 'Microsoft Xiaoxiao (Natural HD) - Chinese (Simplified, China)' },
+      { token: 'Yunjian', desc: 'Microsoft Yunjian (Natural HD) - Chinese (Simplified, China)' },
+    ];
+    syncVoice();
+    if (voiceHint) voiceHint.textContent = '演示：本机离线音色';
+    if (probeHint) probeHint.innerHTML = '演示：<b>2 个离线音色</b>可用';
+    if (probeHint) probeHint.dataset.tip = '默认仍走 Edge，这一档默认不选；二次菜单列的是本机探测到的离线音色';
+  }
+  // #toggled：显示/隐藏小窗的键被别的程序占用（注册失败的样子）
+  if (hash.indexOf('toggled') >= 0) {
+    var hkToggle = document.querySelector('[data-hk="toggle"]');
+    if (hkToggle) {
+      hkToggle.style.color = 'var(--warn)';
+      hkToggle.style.borderColor = 'var(--warn-border)';
+      var tb = document.getElementById('toggleBusy');
+      if (tb) tb.style.display = 'inline-block';
+    }
+  }
+
+  // ── 真实后端桥 ────────────────────────────────────────────────────────
+  // 原型可以用 ?port=<插件端口> 接真插件；没带端口时上面那套演示逻辑照常跑，
+  // 方便继续用 #dark / #blind 这些深链看各种状态，不依赖 DSH。
+  (function attachBackend() {
+    var params = new URLSearchParams(location.search);
+    var embed = params.get('embed') === '1';
+    var port = params.get('port') || (location.port && location.port !== '80' ? location.port : '');
+    // embed（DSH 内嵌 iframe）用相对路径：自动继承 DSH 的 origin+端口，
+    // 不依赖 location.port（iframe 里可能为空，旧逻辑在这里直接 return 导致整页死掉）。
+    if (!embed && !port) return;
+
+    var API = embed ? '/dsh-game-pet-7341' : ('http://127.0.0.1:' + port + '/dsh-game-pet-7341');
+    var saveState = document.getElementById('saveState');
+    var current = null;
+    var pendingVoice = '';
+
+    function state(text, ok) {
+      saveState.textContent = text;
+      saveState.className = 'pill' + (ok === undefined ? '' : ok ? ' pill--ok' : ' pill--warn');
+    }
+    function get(path) {
+      return fetch(API + path, { cache: 'no-store' }).then(function (r) { return r.json(); });
+    }
+    function post(path, body) {
+      return fetch(API + path, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body || {}),
+      }).then(function (r) { return r.json(); });
+    }
+    // 去掉原型的演示监听器（clone 替换），这个按钮从此只走真后端
+    function take(id) {
+      var el = document.getElementById(id);
+      if (!el) return null;
+      var fresh = el.cloneNode(true);
+      el.parentNode.replaceChild(fresh, el);
+      return fresh;
+    }
+    function radio(name, value) {
+      var el = document.querySelector('input[name="' + name + '"][value="' + value + '"]');
+      if (el) el.checked = true;
+    }
+    function picked(name) {
+      var el = document.querySelector('input[name="' + name + '"]:checked');
+      return el ? el.value : '';
+    }
+    function val(id, fallback) {
+      var el = document.getElementById(id);
+      return el ? el.value : fallback;
+    }
+
+    function fill(c) {
+      current = c;
+      srcSel.value = c.askBackend || 'http';
+      epUrl.value = (c.askApi && c.askApi.baseURL) || '';
+      mdlName.value = (c.askApi && c.askApi.model) || '';
+      selFormat.value = (c.askApi && c.askApi.format) || 'openai';
+      inApiKey.value = (c.askApi && c.askApi.hasApiKey) || (c.askApi && c.askApi.apiKey) ? '__KEEP__' : '';
+      var cap = (c.askApi && c.askApi.vision) || 'auto';
+      radio('capmode', cap === 'yes' ? 'vision' : cap === 'no' ? 'text' : 'auto');
+      var cbOneShot = document.getElementById('cbOneShot');
+      if (cbOneShot) cbOneShot.checked = c.askOneShot !== false; // 默认开
+      selCapture.value = c.captureTarget || 'auto';
+      cbPtt.checked = !!c.askEnabled;
+      if (cbAuto) cbAuto.checked = !!c.enabled;
+      cbTts.checked = !!(c.tts && c.tts.enabled);
+      selTtsEngine.value = (c.tts && c.tts.backend) || 'auto';
+      pendingVoice = (c.tts && c.tts.voice) || '';
+      inSpeed.value = (c.tts && c.tts.speed) != null ? c.tts.speed : 1;
+      selBubble.value = c.bubbleStyle || 'classic';
+      inFont.value = c.bubbleFontSize || 13;
+      inWidth.value = c.bubbleMaxWidth || 300;
+      inWinW.value = c.windowWidth || 340;
+      inWinH.value = c.windowHeight || 360;
+      var hk = c.hotkeys || {};
+      var map = { ptt: 'ptt', ask: 'askScreen', clipboard: 'speakClipboard', exit: 'exit', toggle: 'toggleWindow', type: 'typeQuestion' };
+      Object.keys(map).forEach(function (dom) {
+        var el = document.querySelector('[data-hk="' + dom + '"]');
+        var saved = hk[map[dom]];
+        var key = typeof saved === 'string' ? saved : saved && saved.key;
+        if (el && key) el.value = key.replace(/\+/g, ' + ').replace(/ /g, '');
+      });
+      applySource();
+      syncPill();
+      syncVoice();
+      if (pendingVoice) selVoice.value = pendingVoice;
+      state('已连接 · 可保存', true);
+    }
+
+    function collect() {
+      var cap = picked('capmode');
+      var hk = {};
+      var map = { ptt: 'ptt', ask: 'askScreen', clipboard: 'speakClipboard', exit: 'exit', toggle: 'toggleWindow', type: 'typeQuestion' };
+      Object.keys(map).forEach(function (dom) {
+        var el = document.querySelector('[data-hk="' + dom + '"]');
+        if (el) hk[map[dom]] = el.value.replace(/\s/g, '').toLowerCase();
+      });
+      return {
+        askBackend: srcSel.value,
+        askApi: {
+          enabled: true,
+          baseURL: val('epUrl', '').trim(),
+          model: val('mdlName', '').trim(),
+          format: val('selFormat', 'openai'),
+          apiKey: val('inApiKey', '').trim(),
+          vision: cap === 'vision' ? 'yes' : cap === 'text' ? 'no' : 'auto',
+        },
+        captureTarget: val('selCapture', 'auto'),
+        askOneShot: (function () { var el = document.getElementById('cbOneShot'); return el ? el.checked : true; })(),
+        enabled: !!(cbAuto && cbAuto.checked),
+        askEnabled: cbPtt.checked,
+        tts: {
+          enabled: cbTts.checked,
+          backend: val('selTtsEngine', 'auto'),
+          voice: val('selVoice', ''),
+          speed: Number(val('inSpeed', 1)),
+        },
+        bubbleStyle: val('selBubble', 'classic'),
+        bubbleFontSize: Number(val('inFont', 13)),
+        bubbleMaxWidth: Number(val('inWidth', 300)),
+        windowWidth: Number(val('inWinW', 340)),
+        windowHeight: Number(val('inWinH', 360)),
+        hotkeys: hk,
+      };
+    }
+
+    take('btnSave').addEventListener('click', function () {
+      state('保存中…');
+      post('/config', collect())
+        .then(function (r) { state(r.ok ? (r.persisted ? '已保存' : '已生效（未落盘）') : '保存失败：' + (r.message || ''), !!r.ok); })
+        .catch(function (e) { state('保存失败：' + e.message, false); });
+    });
+
+    take('btnProbe').addEventListener('click', function () {
+      if (srcSel.value === 'dsh') return; // dsh 走登录态，没有可探的端点
+      var out = document.getElementById('probeOut');
+      out.textContent = '正在探针…';
+      post('/vision/probe', { api: collect().askApi })
+        .then(function (r) {
+          out.textContent = r.status === 'yes' ? '能看图 ✓' : r.status === 'no' ? '看不了图（走两步式或盲答）' : '没探出来';
+          if (r.code) out.textContent += ' · 数字 ' + r.code;
+        })
+        .catch(function (e) { out.textContent = '探针失败：' + e.message; });
+    });
+
+    // ── 运行状态：灯只认后端真查进程，不再演示假状态 ──────────────
+    var btnRunReal = take('btnRun');
+    var runtimeStatus = null;
+    function paintRuntime(st) {
+      runtimeStatus = st || null;
+      // 兼容尚未重启的旧宿主：它只返回 running（且只看自己 spawn 的 child）
+      var pttOn = !!(st && (st.pttRunning !== undefined ? st.pttRunning : st.running));
+      var bridgeOn = !!(st && st.bridgeRunning);
+      var autoOn = !!(st && st.autoEnabled);
+      ledPtt.dataset.on = pttOn ? '1' : '0';
+      txtPtt.textContent = pttOn ? '按键守护 运行中' : '按键守护 未运行';
+      ledBridge.dataset.on = bridgeOn ? '1' : '0';
+      txtBridge.textContent = bridgeOn ? '播报桥 运行中'
+        : (pttOn && !autoOn ? '播报桥 未启动（自动开口关着）' : '播报桥 未运行');
+      var bits = [];
+      if (pttOn) bits.push('按键 PID ' + st.pttPid);
+      if (bridgeOn) bits.push('播报 PID ' + st.bridgePid);
+      if (st && st.error) bits.push('状态检测异常');
+      runMeta.textContent = bits.join(' · ');
+      var active = pttOn || bridgeOn;
+      btnRunReal.textContent = active ? '停止' : '启动副驾';
+      btnRunReal.className = active ? 'btn' : 'btn btn--primary';
+      btnRunReal.disabled = false;
+      if (cbAuto && st && st.autoEnabled !== undefined) cbAuto.checked = autoOn;
+    }
+    function refreshRuntime() {
+      return get('/runtime/status').then(paintRuntime).catch(function () {
+        ledPtt.dataset.on = '0'; txtPtt.textContent = '按键守护 状态未知';
+        ledBridge.dataset.on = '0'; txtBridge.textContent = '播报桥 状态未知';
+      });
+    }
+    refreshRuntime();
+    setInterval(refreshRuntime, 4000);
+
+    btnRunReal.addEventListener('click', function () {
+      var btn = this;
+      var active = !!(runtimeStatus && (runtimeStatus.pttRunning || runtimeStatus.bridgeRunning));
+      btn.disabled = true;
+      btn.textContent = active ? '停止中…' : '启动中…';
+      post(active ? '/runtime/stop' : '/runtime/start', {})
+        .then(function (r) {
+          state(r.ok ? (r.message || (active ? '已停止' : '已启动')) : (r.message || '操作失败'), !!r.ok);
+          return refreshRuntime();
+        })
+        .catch(function (e) { state(e.message, false); })
+        .then(function () { btn.disabled = false; });
+    });
+
+    // 自动开口开关直接落 enabled（后端自动循环的总闸），下次启动会一起起播报桥
+    if (cbAuto) cbAuto.addEventListener('change', function () {
+      post('/config', { enabled: cbAuto.checked })
+        .then(function (r) {
+          state(r.ok ? '自动开口已' + (cbAuto.checked ? '开启' : '关闭') : '保存失败', !!r.ok);
+          return refreshRuntime();
+        })
+        .catch(function (e) { state(e.message, false); });
+    });
+
+    take('btnTryVoice').addEventListener('click', function () {
+      var btn = this;
+      btn.textContent = '试听中…';
+      // 顶层也带一份音色/引擎：兼容尚未重启的旧版宿主（它只读 body 顶层）。
+      var draft = collect().tts;
+      post('/tts/preview', {
+        text: '矿机缺煤，把传送带接上就行。',
+        settings: draft,
+        backend: draft.backend,
+        voice: draft.voice,
+        speed: draft.speed,
+        volume: draft.volume,
+      })
+        .then(function (r) { btn.textContent = r.ok ? '试听完成' : '试听失败'; setTimeout(function () { btn.textContent = '试听一句'; }, 1500); })
+        .catch(function () { btn.textContent = '试听失败'; });
+    });
+
+    var clearKey = document.getElementById('btnKeyClear');
+    if (clearKey) clearKey.addEventListener('click', function () { inApiKey.value = ''; state('Key 已清空，记得保存', true); });
+
+    // 探测本机离线音色，填「本地自然人声」的二次菜单。
+    // 与配置加载并行：谁先回来都不打架，probe 回来会重渲染并恢复 pendingVoice。
+    get('/tts/probe')
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.message || '探测失败');
+        nativeVoices = r.native_voices || [];
+        renderVoices();
+        if (pendingVoice) selVoice.value = pendingVoice;
+        if (probeHint) {
+          probeHint.innerHTML = r.native_ready
+            ? '<b>' + nativeVoices.length + ' 个离线音色</b>可选'
+            : '未检测到离线音色，第三档需先装包';
+          probeHint.dataset.tip = r.native_ready
+            ? '选第三档后可在「音色」里挑；默认仍走 Edge → 系统语音'
+            : '微软语音包不随包分发，装好后刷新页面重探（见 README）';
+        }
+      })
+      .catch(function (e) {
+        if (probeHint) { probeHint.textContent = '探测失败（悬停看原因）'; probeHint.dataset.tip = String(e.message || '').slice(0, 80); }
+      });
+
+    // ── DSH 会话模型连接状态 + 「连接」按钮 ───────────────────────────
+    // 这两处以前是写死的"未连接"+死按钮，明明 /ask 已经在用会话模型，
+    // 却误导用户以为没连上。真状态从插件的 /workbuddy/status 拿（代理 DSH 状态）。
+    function paintModelStatus(r) {
+      // r 既可能是插件代理的 /workbuddy/status，也可能是 DSH 的 usage 原文
+      var connected = !!(r && (r.connected === true || r.status === 'signed-in'));
+      var text = connected ? '已连接' : '未连接';
+      var cls = 'pill ' + (connected ? 'pill--ok' : 'pill--bad');
+      Array.prototype.forEach.call(document.querySelectorAll('.inline .pill'), function (pill) {
+        if (pill.textContent === '未连接' || pill.textContent === '已连接') {
+          pill.textContent = text;
+          pill.className = cls;
+          pill.title = (r && r.message) || '';
+        }
+      });
+      var dot = document.getElementById('dotCloud');
+      if (dot) dot.dataset.on = connected ? '1' : '0';
+      var msg = (r && r.message) || (connected
+        ? '已连接：' + ((r && r.accountName) || 'DSH 模型服务账号')
+        : '未连接（去 DSH 左侧对应面板登录）');
+      var hint = document.getElementById('wbHint');
+      if (hint) hint.textContent = msg;
+      // 已连接时把两个「去连接」按钮改成「查看账号」并带上账号名，避免误导。
+      Array.prototype.forEach.call(document.querySelectorAll('button'), function (b) {
+        if (b.textContent.indexOf('在 DSH 中连接模型服务') >= 0) {
+          b.textContent = connected ? '已连接 ✓' : '在 DSH 中连接模型服务';
+          b.dataset.connected = connected ? '1' : '0';
+        }
+      });
+      window.__wbConnected = connected;
+      window.__wbAccount = (r && r.accountName) || '';
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('button'), function (btn) {
+      if (btn.textContent.indexOf('在 DSH 中连接模型服务') !== 0 && btn.textContent.indexOf('已连接') !== 0) return;
+      if (btn.dataset.wbBound === '1') return;
+      btn.dataset.wbBound = '1';
+      btn.addEventListener('click', function () {
+        // 网页/iframe 跨进程跳不进 DSH 内部设置页。用页面内提示代替 alert
+        //（DSH 的 iframe 里 alert 常被吞掉，看起来像"点了没反应"）。
+        var hint = document.getElementById('wbHint');
+        var msg = window.__wbConnected
+          ? 'DSH 模型服务已连接（' + (window.__wbAccount || '账号') + '）。作答来源选「DSH 当前会话模型」即可直接用，无需再操作。'
+          : '请在 DSH 左侧栏完成对应模型服务的登录；连上后本页会自动变成「已连接」。';
+        if (hint) {
+          hint.textContent = msg;
+          hint.style.color = 'var(--dsw-alias-brand-primary,#247bbf)';
+          hint.style.fontWeight = '600';
+          if (hint.scrollIntoView) hint.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+      });
+    });
+    // 直接读 DSH 自己的 usage（与本页同源，不用插件代理、不用重启插件）：
+    // 优先试插件的聚合路由（老版本没有会 404），失败再退回 DSH 原生路由。
+    get('/workbuddy/status')
+      .then(function (r) { if (!r || r.ok === false) throw new Error('fallback'); return r; })
+      .catch(function () {
+        return fetch(API.replace('/dsh-game-pet-7341', '') + '/plugins/dsh-connect-workbuddy/usage', { cache: 'no-store' }).then(function (x) { return x.json(); });
+      })
+      .then(paintModelStatus)
+      .catch(function () { /* 探测失败就保留原样，不打扰 */ });
+
+    // ── 对话日志 / 排障：点开才加载，默认脱敏，只读 + 复制 + 导出 ──────────
+    var gLogs = document.getElementById('gLogs');
+    var logSource = document.getElementById('logSource');
+    var logTail = document.getElementById('logTail');
+    var logPlain = document.getElementById('logPlain');
+    var logList = document.getElementById('logList');
+    var logMeta = document.getElementById('logMeta');
+    var logData = null; // 最近一次加载的原始响应，供复制/导出用
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    // 一行日志 → 人类可读的一行 HTML；字段逐个列，原文/脱敏值都按后端给什么显示什么。
+    function rowHtml(row) {
+      var t = row.at || row.ts || '';
+      var kind = row.kind || (row.msg ? 'event' : 'line');
+      var cls = /error|fail|err/i.test(kind) || row.ask_error && row.ask_error !== 'None'
+        ? ' logrow--err' : /turn|ok|done/i.test(kind) ? ' logrow--ok' : '';
+      var head = '<span class="logrow__t">' + esc(t) + '</span><span class="logrow__k">' + esc(kind) + '</span>';
+      var body = '';
+      if (row.text != null || row.raw != null) {
+        body = esc(row.text != null ? row.text : row.raw);
+      } else if (row.question !== undefined || row.answer !== undefined) {
+        // voice_turn：问题 / 回答 / 路由 / 耗时 一行给全
+        var parts = [];
+        if (row.question) parts.push('问：' + row.question);
+        if (row.answer) parts.push('答：' + row.answer);
+        if (row.reasoning) parts.push('思考：' + row.reasoning);
+        var meta = [];
+        ['route', 'ask_mode', 'ask_by', 'total_s', 'tts_backend', 'memory_used'].forEach(function (k) {
+          if (row[k] !== undefined && row[k] !== null && row[k] !== 'None' && row[k] !== '') meta.push(k + '=' + row[k]);
+        });
+        if (row.ask_error && row.ask_error !== 'None') meta.push('错误=' + row.ask_error);
+        body = parts.join(' ｜ ') + (meta.length ? '\n  [' + meta.join(' · ') + ']' : '');
+        body = esc(body);
+      } else {
+        // 其余事件：把已知字段拼成 key=value，跳过空值
+        var kv = [];
+        Object.keys(row).forEach(function (k) {
+          if (k === 'at' || k === 'ts' || k === 'kind') return;
+          var v = row[k];
+          if (v === undefined || v === null || v === '' || v === 'None') return;
+          kv.push(k + '=' + (typeof v === 'object' ? JSON.stringify(v) : v));
+        });
+        body = esc(kv.join(' · '));
+      }
+      return '<div class="logrow' + cls + '">' + head + body + '</div>';
+    }
+
+    function loadLogs() {
+      var src = logSource.value;
+      var tail = logTail.value;
+      var plain = logPlain.checked ? '1' : '0';
+      logMeta.textContent = '加载中…';
+      return get('/logs?source=' + encodeURIComponent(src) + '&tail=' + tail + '&plain=' + plain)
+        .then(function (r) {
+          if (!r || !r.ok) { logMeta.textContent = '读取失败：' + ((r && r.message) || '未知错误'); logList.innerHTML = ''; logData = null; return; }
+          logData = r;
+          if (!r.exists || !r.rows.length) {
+            logList.innerHTML = '<div class="logempty">这个日志还没有内容。先问一句或启动副驾试试。</div>';
+          } else {
+            logList.innerHTML = r.rows.map(rowHtml).join('');
+          }
+          var bits = [r.label + ' · ' + r.shown + ' 条'];
+          if (r.truncated) bits.push('仅显示最近 ' + tail + ' 条（共 ' + r.totalLines + ' 条）');
+          if (!logPlain.checked) bits.push('原文已隐藏');
+          logMeta.textContent = bits.join(' · ');
+        })
+        .catch(function (e) { logMeta.textContent = '读取失败：' + e.message; logData = null; });
+    }
+
+    if (gLogs) {
+      // 默认折叠；首次展开才加载，避免每次开设置页都读盘。
+      gLogs.addEventListener('toggle', function () {
+        if (gLogs.open) loadLogs();
+      });
+      document.getElementById('btnLogRefresh').addEventListener('click', loadLogs);
+      logSource.addEventListener('change', loadLogs);
+      logTail.addEventListener('change', loadLogs);
+      logPlain.addEventListener('change', loadLogs); // 明文开关走后端脱敏，不就地解封
+
+      function logText() {
+        if (!logData || !logData.rows) return '';
+        return logData.rows.map(function (row) {
+          var t = row.at || row.ts || '';
+          var parts = [];
+          Object.keys(row).forEach(function (k) {
+            if (k === 'at' || k === 'ts' || k === 'kind') return;
+            if (row[k] === undefined || row[k] === null || row[k] === '') return;
+            parts.push(k + '=' + (typeof row[k] === 'object' ? JSON.stringify(row[k]) : row[k]));
+          });
+          return t + ' [' + (row.kind || '') + '] ' + parts.join(' · ');
+        }).join('\n');
+      }
+      document.getElementById('btnLogCopy').addEventListener('click', function () {
+        var text = logText();
+        var btn = this;
+        if (!text) { logMeta.textContent = '没有可复制的内容'; return; }
+        var done = function () { btn.textContent = '已复制'; setTimeout(function () { btn.textContent = '复制全部'; }, 1400); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () { logMeta.textContent = '复制失败，请手动选中'; });
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); done(); } catch (_) { logMeta.textContent = '复制失败，请手动选中'; }
+          document.body.removeChild(ta);
+        }
+      });
+      document.getElementById('btnLogExport').addEventListener('click', function () {
+        var text = logText();
+        if (!text) { logMeta.textContent = '没有可导出的内容'; return; }
+        var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'dsh-game-pet-' + logSource.value + '-' + new Date().toISOString().slice(0, 10) + '.log';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      });
+    }
+
+    get('/config')
+      .then(function (r) { if (!r.ok) throw new Error(r.message || '读配置失败'); fill(r.config); })
+      .catch(function (e) { state('读配置失败：' + e.message, false); });
+  })();
+})();
+
+// ── 内嵌模式：把内容高度报给父窗口（DSH 设置面板 iframe），实现自适应 ──
+(function () {
+  if (new URLSearchParams(location.search).get('embed') !== '1') return;
+  var send = function () {
+    try {
+      parent.postMessage({ type: 'dsh-game-pet:height', height: document.body.scrollHeight + 8 }, '*');
+    } catch (_) {}
+  };
+  if (window.ResizeObserver) new ResizeObserver(send).observe(document.body);
+  window.addEventListener('load', send);
+  send();
+})();
+</script>
+
+
+</body></html>
