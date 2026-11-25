@@ -31,7 +31,7 @@
 
 **1. 下载完整包并安装**（推荐）
 
-到 [Releases](https://github.com/<你的账号>/dsh-game-copilot/releases) 下载最新的 `dsh-game-copilot-<版本>-full.zip`（约 430MB，已含语音识别模型），解压得到 `dsh-game-copilot` 文件夹，在其中打开 PowerShell 运行：
+到 [Releases](https://github.com/CreaterCandy/dsh-game-copilot/releases) 下载最新的 `dsh-game-copilot-<版本>-full.zip`（约 430MB，已含语音识别模型），解压得到 `dsh-game-copilot` 文件夹，在其中打开 PowerShell 运行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
@@ -45,7 +45,7 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 <summary>另一种方式：用 Git 克隆（仓库不含模型，走 Release 模型包）</summary>
 
 ```bash
-git clone https://github.com/<你的账号>/dsh-game-copilot.git
+git clone https://github.com/CreaterCandy/dsh-game-copilot.git
 cd dsh-game-copilot
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
