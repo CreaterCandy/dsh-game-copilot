@@ -77,6 +77,24 @@ let moveTimer = null;
  */
 let dragBase = null;
 /**
+ * 命中区（相对窗口内容区的 CSS px，由渲染层上报），以及"是否可交互"的**唯一判据**。
+ *
+ * ⚠️ 2026-11-25 现场实测的根因：`setIgnoreMouseEvents(true, { forward: true })` 靠
+ * Electron 转发的 mousemove 判断悬停，但这套转发在这个环境（Electron 20 + Windows +
+ * 透明无边框 + 穿透）里**会彻底失效**。失效后：鼠标在宠物身上连续移动 1 秒、24 个
+ * 移动事件全部收不到，渲染层永远不会 setInteractive(true)，窗口永远停在
+ * WS_EX_TRANSPARENT，点击直接穿到下层——用户看到的就是"小窗动不了，怎么点都没反应"，
+ * 而且**不会自愈**，只能重启 DSH 让窗口重建。日志铁证：失效期间只有 15s 心跳，
+ * 一条 drag start 都没有（说明 pointerdown 根本没派发到窗口）。
+ *
+ * 所以不再把命中的判断押在事件上：主进程每 120ms 用系统光标位置自己算一次。
+ * 事件路径保留（能提前几十毫秒响应），但只作为"催一下"，不再单独决定状态。
+ */
+let hitRects = { pet: null, askbar: null };
+/** 最近一次真实 dragMove 的时间戳：用于 pointerup 丢失时的收尾兜底 */
+let lastDragMoveAt = 0;
+
+/**
  * 窗口外框尺寸（在 createWindow 后固定下来）。
  *
  * ⚠️ 2026-11-25 实测根因：Electron 20 + Windows 的**透明无边框窗**每调用一次
@@ -272,6 +290,39 @@ function applyMouseMode() {
   win?.setIgnoreMouseEvents(!(interactive || inputFocused), { forward: true });
 }
 
+function pointInRect(pt, rect, bounds) {
+  if (!rect) return false;
+  return (
+    pt.x >= bounds.x + rect.x &&
+    pt.x <= bounds.x + rect.x + rect.w &&
+    pt.y >= bounds.y + rect.y &&
+    pt.y <= bounds.y + rect.y + rect.h
+  );
+}
+
+/**
+ * 主动判定"这一块现在该不该吃鼠标"：读系统光标位置，和渲染层上报的命中区比对。
+ * 不用任何鼠标事件，所以事件丢失/被吞/布局抖动都不会让它卡死。
+ */
+function syncMouseMode() {
+  if (!win) return;
+  const bounds = win.getBounds();
+  const pt = screen.getCursorScreenPoint();
+  let next;
+  if (dragBase || inputFocused) {
+    next = true; // 拖拽 / 打字期间无条件可交互，防止中途掉穿透把拖拽打断
+  } else {
+    next = pointInRect(pt, hitRects.pet, bounds) || pointInRect(pt, hitRects.askbar, bounds);
+  }
+  if (next === interactive) return;
+  interactive = next;
+  applyMouseMode();
+  trace(
+    `mouse mode -> ${next ? 'interactive' : 'passthrough'} cursor=${pt.x},${pt.y} ` +
+      `bounds=${bounds.x},${bounds.y},${bounds.width}x${bounds.height} pet=${JSON.stringify(hitRects.pet)}`,
+  );
+}
+
 /**
  * 拖拽：**不用** `-webkit-app-region: drag`（那个要求窗口可聚焦/已聚焦，本窗是
  * `focusable: false` 的置顶窗，实测点了没反应），改成渲染层报**光标的屏幕绝对坐标**、
@@ -279,6 +330,7 @@ function applyMouseMode() {
  */
 function startDrag(sx, sy) {
   if (!win) return;
+  lastDragMoveAt = Date.now();
   const b = win.getBounds();
   const px = Number(sx);
   const py = Number(sy);
@@ -304,6 +356,7 @@ function startDrag(sx, sy) {
  */
 function moveDrag(sx, sy) {
   if (!win || !dragBase) return;
+  lastDragMoveAt = Date.now();
   const px = Number(sx);
   const py = Number(sy);
   if (!Number.isFinite(px) || !Number.isFinite(py)) return;
@@ -356,6 +409,7 @@ function moveDrag(sx, sy) {
 function endDrag() {
   if (!win || !dragBase) return;
   dragBase = null;
+  lastDragMoveAt = 0;
   const [x, y] = win.getPosition();
   trace(`drag end -> ${x},${y}`);
   void post(posUrl, { x, y });
@@ -366,11 +420,20 @@ app.whenReady().then(
     trace('app ready');
     createWindow();
 
-    ipcMain.on('gp-set-interactive', (_event, value) => {
-      const next = Boolean(value);
-      if (next === interactive) return;
-      interactive = next;
-      applyMouseMode();
+    // 渲染层只是"催一下"：真正判定在 syncMouseMode。这样事件流正常时响应更快，
+    // 事件流断了（见 hitRects 注释）也不会卡死——两条路径不争夺状态。
+    ipcMain.on('gp-set-interactive', () => syncMouseMode());
+
+    /** 渲染层上报命中区（相对窗口内容区，CSS px）。布局一变就重报，轮询据此判定。 */
+    ipcMain.on('gp-hit-rects', (_event, payload) => {
+      if (payload && typeof payload === 'object') {
+        const next = { pet: payload.pet || null, askbar: payload.askbar || null };
+        if (JSON.stringify(next) !== JSON.stringify(hitRects)) {
+          hitRects = next;
+          trace(`hit rects pet=${JSON.stringify(next.pet)} askbar=${JSON.stringify(next.askbar)}`);
+        }
+      }
+      syncMouseMode();
     });
 
     /**
@@ -406,6 +469,19 @@ app.whenReady().then(
     ipcMain.on('gp-drag-end', () => endDrag());
 
     ipcMain.on('gp-quit', () => app.quit());
+
+    /**
+     * 120ms 轮询：不依赖任何鼠标事件地维护"能不能点"。
+     * 顺带做拖拽收尾兜底——pointerup 一旦丢失（窗口在拖拽中仍可能被系统吞事件），
+     * 窗口会一直粘着光标跑，超过 2.5 秒没有任何 move 就当作已松手。
+     */
+    setInterval(() => {
+      syncMouseMode();
+      if (dragBase && lastDragMoveAt && Date.now() - lastDragMoveAt > 2500) {
+        trace('drag timeout (no move 2.5s) -> force end');
+        endDrag();
+      }
+    }, 120);
 
     // 宿主不在了就退出（每 15 秒探一次）；顺便把窗口状态记一行，排障用
     setInterval(() => {

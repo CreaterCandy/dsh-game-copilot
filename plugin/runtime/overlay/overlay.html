@@ -269,6 +269,39 @@
           window.gp.setInteractive(value);
         };
 
+        // ── 命中区上报：让宿主自己算"能不能点"，不依赖被转发的 mousemove ──────
+        // 穿透窗的 forwarded mousemove 会整体失效（宿主实测：鼠标在宠物上连续移动 1 秒
+        // 一个事件都收不到），失效后窗口永远点不到、拖不动，只能重启。所以这里把
+        // 「宠物/输入条现在在哪」主动报给宿主，宿主每 120ms 拿系统光标位置比对一次。
+        // 布局一变就重报：尺寸变化靠 ResizeObserver，位置变化（气泡显隐把宠物顶下去）
+        // 尺寸可能不变，所以 tick 之后和定时器里也各报一次。
+        const rectOf = (node) => {
+          if (!node || node.hidden) return null;
+          const r = node.getBoundingClientRect();
+          if (!r.width || !r.height) return null;
+          return {
+            x: Math.round(r.x),
+            y: Math.round(r.y),
+            w: Math.round(r.width),
+            h: Math.round(r.height),
+          };
+        };
+        let lastHitJson = '';
+        const reportHitRects = () => {
+          const next = { pet: rectOf(pet), askbar: rectOf(askbar) };
+          const json = JSON.stringify(next);
+          if (json === lastHitJson) return; // 没变就不发，免得 IPC 与日志被刷爆
+          lastHitJson = json;
+          window.gp?.setHitRects(next);
+        };
+        reportHitRects();
+        if (window.ResizeObserver) {
+          const hitObserver = new ResizeObserver(() => reportHitRects());
+          for (const node of [root, bubble, askbar, pet]) hitObserver.observe(node);
+        }
+        // 纯兜底（观察器对"同尺寸换位置"无感）：成本只是几次 getBoundingClientRect
+        setInterval(reportHitRects, 400);
+
         /** 小窗给宿主回话用的轻量 POST（路由不存在时静默当成失败）。 */
         const postRoute = (path, body) =>
           fetch(`${ROUTE}${path}`, {
@@ -411,6 +444,11 @@
         };
         pet.addEventListener('pointerup', endDrag);
         pet.addEventListener('pointercancel', endDrag); // 系统取消手势也要收尾，别让 dragging 卡住
+        // 兜底：指针捕获失败（老环境没有该 API）或窗口在拖拽中被系统吞事件时，
+        // pointerup 可能派发不到 pet。挂到 window 上，capture 正常时也只会走一次
+        // （endDrag 开头有 `if (!dragging) return` 守卫）。
+        window.addEventListener('pointerup', endDrag);
+        window.addEventListener('pointercancel', endDrag);
 
         // 穿透窗口靠 forwarded mousemove 判断"鼠标进没进宠物命中区"。
         // ⚠️ 拖拽期间这里绝不再发 dragMove：位移已由 pointermove 上报，
@@ -598,6 +636,9 @@
         }
 
         function schedule() {
+          // 状态刚落到 DOM 上：气泡显隐/换行都会挪动宠物，命中区必须立刻重报，
+          // 否则宿主还在按旧矩形判定，鼠标到了新位置也不算"在宠物上"。
+          reportHitRects();
           // 输入条要跟手响应热键，轮询不能再用 3 秒；本地 /state 很便宜，
           // 平时 500ms、输入时 250ms，足够快又不至于把 CPU 吵醒。
           setTimeout(() => void tick(), inputOpen ? 250 : 500);

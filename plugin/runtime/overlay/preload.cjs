@@ -8,6 +8,14 @@ contextBridge.exposeInMainWorld('gp', {
     ipcRenderer.send('gp-set-interactive', Boolean(value));
   },
   /**
+   * 上报命中区（相对窗口内容区的 CSS px，{pet:{x,y,w,h}, askbar:同上|null}）。
+   * 宿主拿它和系统光标位置比对来判定穿透——**不依赖 mousemove 转发**，因为那套转发
+   * 在穿透窗上会彻底失效，失效后窗口永远点不到、拖不动（见 main.mjs 的 hitRects 注释）。
+   */
+  setHitRects(payload) {
+    ipcRenderer.send('gp-hit-rects', payload);
+  },
+  /**
    * 拖拽三件套：按**屏幕绝对坐标**挪窗。
    * 为什么不用 `-webkit-app-region: drag`：那个要求窗口可聚焦/已聚焦，
    * 而这是 `focusable: false` 的置顶窗，实测按上去没反应。手动拖完全绕开这个限制。
