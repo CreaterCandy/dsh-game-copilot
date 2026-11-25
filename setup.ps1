@@ -170,6 +170,16 @@ if (-not (Test-Path (Split-Path $profile -Parent))) {
 } else {
     Copy-Item (Join-Path $root 'plugin') $profile -Recurse -Force
     Write-Host "插件已装到 $profile" -ForegroundColor Green
+
+    # 登记 runtime 真实路径。打包安装后插件在 node_modules 里，靠相对路径算不回工程根
+    # （实测会算成 node_modules\runtime，然后点"启动副驾"报找不到 python.exe）。
+    # 必须写无 BOM 的 UTF-8：带 BOM 时插件读到的路径前面多一个不可见字符，
+    # existsSync 必然判不存在，等于白登记。
+    $runtimeDir = Join-Path $root 'runtime'
+    $marker = Join-Path $profile 'runtime-path.txt'
+    $noBom = New-Object System.Text.UTF8Encoding($false)
+    [IO.File]::WriteAllText($marker, $runtimeDir, $noBom)
+    Write-Host "已登记 runtime 路径 -> $marker" -ForegroundColor DarkGray
 }
 $petCfg = Join-Path $homeDir 'dsh-game-copilot.json'
 $legacyPetCfg = Join-Path $homeDir 'dsh-game-pet.json'

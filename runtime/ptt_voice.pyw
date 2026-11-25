@@ -58,6 +58,8 @@ HOST_PROBE_SEC = 1.0        # 多久看一次心跳（stat，成本可忽略）
 HOST_GRACE_SEC = 16.0       # 心跳超过这么久没更新 = DSH 已退出（容忍 3 次漏写）
 HOST_EXIT_AFTER_SEC = 300.0 # 离线持续这么久就自己退出，别长期占着内存和热键
 
+_MUTEX = None  # 单实例互斥量句柄：进程存活期间一直持有（退出由系统自动释放）
+
 # 配置名 -> 虚拟键码。未列出的键给提示，不静默失败。
 VK = {
     "oem_3": 0xC0, "capslock": 0x14,
@@ -225,52 +227,85 @@ SPEAK_MODS, _ = hk_vk(HK["speak_clipboard"])
 EXIT_MODS, _ = hk_vk(HK["exit"])
 TYPE_MODS, _ = hk_vk(HK.get("type_question") or {"modifiers": ["ctrl", "alt"], "key": "t"})
 
-def _register_oneshot_hotkeys(quiet: bool = False) -> None:
-    """注册四个一次性热键；**被占用时明确告知并退出**，不再静默闪退。
+def _hotkey_specs() -> list:
+    """(热键 id, 配置键, 中文名, 修饰位, 虚拟键码)。"""
+    return [
+        (ID_ASK, "ask_screen", "截图问答", ASK_MODS, ASK_VK),
+        (ID_SPEAK, "speak_clipboard", "剪贴板提问", SPEAK_MODS, SPEAK_VK),
+        (ID_TYPE, "type_question", "打字提问", TYPE_MODS, TYPE_VK),
+        (ID_EXIT, "exit", "退出守护", EXIT_MODS, EXIT_VK),
+    ]
 
-    2026-11-24 踩坑：旧实例还占着热键时，这里抛
-        pywintypes.error: (1409, 'RegisterHotKey', '热键已注册。')
-    而 pythonw 没有控制台 → 用户双击 start_copilot.cmd 只看到黑框一闪，
-    完全不知道"没启动成功"，还会误以为改了配置却不生效。
-    所以这里既写日志，也弹一个短提示框，把"怎么处理"直接说清楚。
 
-    quiet=True 是给"宿主回来后重新抢热键"用的：那条路径在后台自动跑，
-    弹窗会莫名其妙糊用户一脸，失败就再等着下一轮重试。
+def _hk_text(cfg_key: str) -> str:
+    """把配置里的热键显示成 ctrl+alt+w，报错时用户能直接对照着改。"""
+    spec = HK.get(cfg_key) or {}
+    parts = [str(m).lower() for m in (spec.get("modifiers") or [])]
+    parts.append(str(spec.get("key") or "").lower())
+    return "+".join(p for p in parts if p)
+
+
+def _register_oneshot_hotkeys(quiet: bool = False) -> list:
+    """逐个注册一次性热键；**某个键被占用只停用它，绝不拖垮整个守护**。
+
+    2026-11-25 work 侧实测踩坑：ctrl+alt+w / ctrl+alt+t 被 RustDesk 一类软件占着，
+    旧代码任何一条失败就 SystemExit(1)，结果 Caps Lock 按住说话（靠轮询取键，
+    压根不抢热键、不可能冲突）也一起用不了。核心功能不该被附加热键连坐。
+    旧弹窗还把原因写死成"Caps Lock 被占用"，直接把人带偏——它根本不会冲突。
+
+    防双开改由 _single_instance() 负责，不再靠"热键冲突"间接判断。
+    返回冲突项的描述列表（调用方只用于日志/展示）。
     """
+    failed = []
+    for hk_id, cfg_key, label, mods, vk in _hotkey_specs():
+        if not (HK.get(cfg_key) or {}).get("enabled", True):
+            continue  # 整条被关掉的热键不注册
+        try:
+            win32gui.RegisterHotKey(0, hk_id, mods, vk)
+        except Exception as e:  # noqa: BLE001
+            if getattr(e, "winerror", None) != 1409:
+                raise  # 不是"被占用"而是真出错，别吞掉
+            failed.append(f"{label}（{_hk_text(cfg_key)}）")
+
+    if failed:
+        text = "\n".join(f"  · {item}" for item in failed)
+        try:
+            log_event("hotkey_conflict", keys=failed)
+        except Exception:
+            pass
+        print(f"[hotkey] 以下热键被别的软件占用，对应功能停用：\n{text}", file=sys.stderr)
+        if not quiet:
+            msg = (
+                "副驾已启动，但有几个热键被别的软件占用：\n\n"
+                f"{text}\n\n"
+                "这几个键对应的功能暂时用不了；按住说话不受影响"
+                "（它靠轮询取键，不与任何软件抢热键）。\n\n"
+                "处理办法：\n"
+                "  1) 停掉占用的软件后重启副驾；\n"
+                "  2) 或在设置页「按键」里换成别的组合 / 直接关掉该功能。"
+            )
+            try:
+                win32gui.MessageBox(0, msg, "AI 助理 · 部分热键被占用", 0x00000030)  # MB_ICONWARNING
+            except Exception:
+                pass
+    return failed
+
+
+def _single_instance() -> bool:
+    """单实例判定：已有守护在跑就返回 False。
+
+    为什么单独做（不再靠热键冲突间接判断）：热键冲突现在只停用单个功能，
+    若还拿"能否抢到热键"当唯一判据，会放过第二个实例——两个进程同时轮询
+    Caps Lock、各录一份、各问一遍，用户听到两次回答，还白占一份 ASR 内存。
+    命名互斥量与本进程生命周期绑定，进程被杀系统自动释放，不会留残留锁。
+    """
+    global _MUTEX
     try:
-        # enabled=false 的热键整条不注册（设置页附加热键各有开关）
-        if HK.get("ask_screen", {}).get("enabled", True):
-            win32gui.RegisterHotKey(0, ID_ASK, ASK_MODS, ASK_VK)
-        if HK.get("speak_clipboard", {}).get("enabled", True):
-            win32gui.RegisterHotKey(0, ID_SPEAK, SPEAK_MODS, SPEAK_VK)
-        if HK.get("exit", {}).get("enabled", True):
-            win32gui.RegisterHotKey(0, ID_EXIT, EXIT_MODS, EXIT_VK)
-        if (HK.get("type_question") or {}).get("enabled", True):
-            win32gui.RegisterHotKey(0, ID_TYPE, TYPE_MODS, TYPE_VK)
-        return
-    except Exception as e:  # noqa: BLE001
-        if getattr(e, "winerror", None) != 1409:
-            raise
-        if quiet:
-            raise  # 调用方（待机恢复）自己决定要不要重试，不弹窗
-        msg = (
-            "AI 助理启动失败：热键已被占用。\n\n"
-            "最常见的情况是旧实例还在后台跑着（它占着 Caps Lock 等热键），\n"
-            "所以新实例起不来，改了配置也不会生效。也可能是别的软件占了同一组热键。\n\n"
-            "处理办法（任选一种）：\n"
-            "  1) 按 Ctrl+Alt+Shift+Q 退出旧实例，再双击 start_copilot.cmd\n"
-            "  2) 任务管理器结束 pythonw.exe，再双击 start_copilot.cmd"
-        )
-        print(msg, file=sys.stderr)
-        try:
-            log_event("hotkey_conflict", msg="另一个实例已占用热键，本次启动取消")
-        except Exception:
-            pass
-        try:
-            win32gui.MessageBox(0, msg, "AI 助理 · 已在运行", 0x00000030)  # MB_ICONWARNING
-        except Exception:
-            pass
-        raise SystemExit(1)
+        import win32event
+        _MUTEX = win32event.CreateMutex(None, False, "dsh-game-pet-ptt-daemon")
+        return win32api.GetLastError() != 183  # ERROR_ALREADY_EXISTS
+    except Exception:
+        return True  # 拿不到互斥就退回旧行为：宁可双开也别起不来
 
 
 # 注意：注册动作放在 __main__ 里调用（见文件末尾）。
@@ -836,9 +871,9 @@ def host_tick() -> None:
     if alive and not _host["alive"]:
         # DSH 回来了（多半是重启完成）→ 自动恢复，不用用户再点"启动副驾"
         try:
-            _reregister_hotkeys()
-        except Exception as e:  # 热键被别的程序占了：保持待机，下轮再试
-            log_event("host_online_hotkey_busy", error=repr(e))
+            _reregister_hotkeys()  # 内部逐个容错：个别键被外部占了只停用那个功能
+        except Exception as e:
+            log_event("host_online_hotkey_error", error=repr(e))
             return
         _host["alive"] = True
         _host["offline_since"] = 0.0
@@ -893,7 +928,28 @@ def message_loop() -> None:
 
 
 if __name__ == "__main__":
-    _register_oneshot_hotkeys()  # 先抢热键：被占用会弹框说明，而不是静默死掉
+    # 先判单实例：两个守护同时轮询 Caps Lock 会各录一份、各问一遍。
+    # 注意这不等于"热键冲突"——附加热键被外部软件占了照样能跑，只停用那个功能。
+    if not _single_instance():
+        msg = (
+            "副驾已经在后台跑着了（同一个守护不能开两个）。\n\n"
+            "处理办法（任选一种）：\n"
+            "  1) 直接用它，不用再启动；\n"
+            "  2) 想重开：按 Ctrl+Alt+Shift+Q 退出旧的，再启动一次；\n"
+            "  3) 任务管理器结束 pythonw.exe / python.exe 后重试。"
+        )
+        print(msg, file=sys.stderr)
+        try:
+            log_event("already_running", msg="已有守护实例在跑，本次启动取消")
+        except Exception:
+            pass
+        try:
+            win32gui.MessageBox(0, msg, "AI 助理 · 已在运行", 0x00000030)
+        except Exception:
+            pass
+        raise SystemExit(1)
+
+    _register_oneshot_hotkeys()  # 被占用的附加热键只停用自己，按住说话不受影响
     log_event(
         "daemon_started",
         ptt=f"{'+'.join(HK['ptt_voice'].get('modifiers', [])) or ''}+{HK['ptt_voice']['key']}",

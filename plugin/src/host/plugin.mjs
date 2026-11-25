@@ -139,6 +139,27 @@ function maskJsonlRow(row, plain) {
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const ANIMATION_DIR = path.join(PACKAGE_ROOT, 'assets', 'webm');
 const OVERLAY_HTML = path.join(PACKAGE_ROOT, 'runtime', 'overlay', 'overlay.html');
+
+/**
+ * 设置页文件位置。
+ *
+ * 踩过的坑（work 侧实测）：旧代码用 `path.resolve(PACKAGE_ROOT,'..','settings.html')`。
+ * 源码布局下 PACKAGE_ROOT=<工程根>/plugin，`..` 正好是工程根，能找到；
+ * 但打包安装后插件被整体复制到 `<profile>/node_modules/dsh-game-copilot/`，
+ * `..` 变成 node_modules 根，设置页就"文件缺失"了。
+ * 所以设置页放在插件目录内（随插件一起被复制），旧的工程根位置留作回退。
+ */
+function settingsPagePath() {
+  const candidates = [
+    path.join(PACKAGE_ROOT, 'settings.html'), // 包内：源码与打包布局都适用
+    path.resolve(PACKAGE_ROOT, '..', 'settings.html'), // 旧布局：工程根
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return candidates[0];
+}
+
 /** 窗口位置单独存一份（用户拖过就该记住，不该改写 profile 的 patch） */
 const POSITION_FILE = path.join(process.env.DSH_HOME || path.join(homedir(), '.dsh'), 'dsh-game-copilot-window.json');
 
@@ -372,7 +393,7 @@ export function apply(ctx, config) {
     }
     // 设置页（独立 HTML，和 DSH 设置面板共用同一份文件）
     if (method === 'GET' && route === '/settings') {
-      const file = path.resolve(PACKAGE_ROOT, '..', 'settings.html');
+      const file = settingsPagePath();
       if (!existsSync(file)) {
         sendJson(res, 404, { ok: false, message: `设置页文件缺失：${file}` });
         return;
@@ -428,13 +449,13 @@ export function apply(ctx, config) {
         sendJson(res, 200, { ok: false, reason: 'empty-question', message: '问题为空' });
         return;
       }
-      const python = copilotPython();
+      const python = copilotPythonDetached();
       const script = path.join(COPILOT_ROOT, 'ask.py');
       if (!python || !existsSync(script)) {
         sendJson(res, 200, {
           ok: false,
           reason: 'no-python',
-          message: !python ? '没找到 runtime/venv 里的 python.exe，先跑 setup.ps1' : `找不到 ${script}`,
+          message: !python ? missingRuntimeHint() : `找不到 ${script}`,
         });
         return;
       }
@@ -664,19 +685,19 @@ export function apply(ctx, config) {
         autoEnabled: Boolean(session.settings.enabled),
         script: existsSync(path.join(COPILOT_ROOT, 'ptt_voice.pyw')),
         bridgeScript: existsSync(path.join(COPILOT_ROOT, 'pet_voice_bridge.py')),
-        python: Boolean(copilotPython()),
+        python: Boolean(copilotPythonDetached()),
         error: procs.error,
       });
       return;
     }
     if (method === 'POST' && route === '/runtime/start') {
-      const python = copilotPython();
+      const python = copilotPythonDetached();
       const script = path.join(COPILOT_ROOT, 'ptt_voice.pyw');
       const bridge = path.join(COPILOT_ROOT, 'pet_voice_bridge.py');
       if (!python || !existsSync(script)) {
         sendJson(res, 200, {
           ok: false,
-          message: !python ? '没找到 runtime/venv 里的 python.exe，先跑 setup.ps1' : `找不到 ${script}`,
+          message: !python ? missingRuntimeHint() : `找不到 ${script}`,
         });
         return;
       }
@@ -1163,9 +1184,46 @@ function publicConfig(config) {
 // ── 语音试听 ──────────────────────────────────────────────────────────────
 // 真正干活的是 runtime/tts/tts_interface.py。插件这边只负责"用当前设置起一个进程"，
 // 这样试听听到的就是下一句话会用的声音（音色/语速/音量全都如实传过去）。
-const COPILOT_ROOT = process.env.AI_COPILOT_HOME || path.resolve(HERE, '..', '..', '..', 'runtime');
+/**
+ * Python 侧运行时根目录（venv / ptt_voice.pyw / 模型都在这）。
+ *
+ * 为什么不能简单算相对路径（work 侧实测踩坑）：打包安装后插件被整体复制到
+ * `<profile>/node_modules/dsh-game-copilot/`，HERE 往上三级落在 node_modules/，
+ * 拼出来是 node_modules/runtime —— 不存在，于是 /runtime/start 报"没找到
+ * runtime/venv 里的 python.exe"，而工程根的 runtime 还好好的。
+ * 查找顺序：环境变量 → setup 登记的 runtime-path.txt → 几个候选 → 兜底返回源码布局
+ * （让后续报错能带上真实路径）。不把 runtime 复制进 profile 是有意的：里面是
+ * 464MB 模型 + venv，venv 又绑死绝对路径，复制/软链都会带来新问题。
+ */
+const COPILOT_ROOT = (() => {
+  const fromEnv = process.env.AI_COPILOT_HOME;
+  if (fromEnv && existsSync(fromEnv)) return fromEnv;
 
-/** 找助理那套 Python 解释器（必须是 python.exe，pythonw 读不到输出）。 */
+  // setup.ps1 装完会写这个文件（跟着插件目录走，重装即刷新）。
+  // 注意 strip BOM：PowerShell 5.1 的 -Encoding UTF8 会带 BOM，带 BOM 的路径 existsSync 必失败。
+  try {
+    const recorded = readFileSync(path.join(PACKAGE_ROOT, 'runtime-path.txt'), 'utf8')
+      .replace(/^\uFEFF/, '')
+      .trim();
+    if (recorded && existsSync(recorded)) return recorded;
+  } catch {
+    // 没登记过，继续按布局猜
+  }
+
+  const guesses = [
+    path.resolve(HERE, '..', '..', '..', 'runtime'), // 源码布局：<root>/plugin/src/host → <root>/runtime
+    path.resolve(PACKAGE_ROOT, '..', 'runtime'), // 打包布局的回退：<root>/plugin → <root>/runtime
+    path.join(PACKAGE_ROOT, 'runtime'), // 有人把 runtime 一起拷进了插件目录
+  ];
+  for (const guess of guesses) {
+    if (existsSync(path.join(guess, 'venv', 'Scripts')) || existsSync(path.join(guess, 'venv', 'bin'))) {
+      return guess;
+    }
+  }
+  return guesses[0];
+})();
+
+/** 找助理那套 Python 解释器（需要读 stdout/stderr 的场景用它）。 */
 function copilotPython() {
   const explicit = process.env.AI_COPILOT_PYTHON;
   if (explicit && existsSync(explicit)) return explicit;
@@ -1178,6 +1236,41 @@ function copilotPython() {
   }
   return null;
 }
+
+/**
+ * 后台守护用的解释器：pythonw 优先。
+ *
+ * 为什么（work 侧实测）：uv 建出来的 venv/Scripts/python.exe 只是个启动器（262KB），
+ * 它会再 spawn 一个带控制台的真身，于是点"启动游戏助理"就闪两个黑框（ptt + bridge 各一个）。
+ * windowsHide 管不到孙子进程，只有换成 GUI 子系统的 pythonw 才彻底没有控制台。
+ *
+ * 只能用于 stdio 已重定向（文件 / 'ignore'）的 spawn —— 那种情况下 pythonw 的
+ * sys.stdout 指向重定向目标而非 None，Python 里 print 照常工作。
+ * **不能**用于"读 stdout 判断结果"的场景（tts --check --json），那里必须 python.exe。
+ */
+function copilotPythonDetached() {
+  const explicit = process.env.AI_COPILOT_PYTHONW;
+  if (explicit && existsSync(explicit)) return explicit;
+  const pythonw = path.join(COPILOT_ROOT, 'venv', 'Scripts', 'pythonw.exe');
+  if (existsSync(pythonw)) return pythonw;
+  return copilotPython(); // 没有 pythonw 就退回原逻辑
+}
+
+/**
+ * 找不到 Python 时的报错文案。
+ * 含糊的"找不到 runtime/venv 里的 python.exe"最坑人——用户不知道是路径算错了还是没装。
+ * 所以把期望路径、实际算出来的根目录、两条出路都写进去。
+ */
+function missingRuntimeHint() {
+  return [
+    `没找到 Python 运行时。当前算出的 runtime 目录：${COPILOT_ROOT}`,
+    `期望其中有 venv\\Scripts\\python.exe（或 pythonw.exe）。`,
+    '处理办法（任选一种）：',
+    '  1) 重跑安装包里的 setup.ps1 —— 它会把真实的 runtime 路径登记到插件目录；',
+    '  2) 设环境变量 AI_COPILOT_HOME 指向工程根的 runtime 目录，然后重启 DSH。',
+  ].join('\n');
+}
+
 
 /**
  * 按当前 tts 设置念一句试听。

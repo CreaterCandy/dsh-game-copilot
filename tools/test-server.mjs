@@ -32,7 +32,7 @@ import { runProbe } from '../plugin/src/host/http-llm.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const HTML = path.join(ROOT, 'settings.html');
+const HTML = path.join(ROOT, 'plugin', 'settings.html');
 const CONFIG = path.join(ROOT, 'config', 'dsh-game-copilot.json');
 const TTS_DIR = path.join(ROOT, 'runtime', 'tts');
 const PORT = Number(process.env.GAMEPET_TEST_PORT || 7342);
