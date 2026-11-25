@@ -41,7 +41,7 @@ import { moodOf, pickAnimation } from '../shared/agent.mjs';
 
 export const ROUTE_PREFIX = '/dsh-game-copilot-7341';
 
-/** 一键启动拉起的 Python 副驾进程（detached，插件退出也不跟着死）。 */
+/** 一键启动拉起的 Python 助理进程（detached，插件退出也不跟着死）。 */
 let runtimeChild = null;
 
 /**
@@ -93,7 +93,7 @@ function logTail(file, lines = 6) {
 /**
  * 设置页「对话日志 / 排障」的日志源清单。
  * 路径里的 HOME 与 /runtime/start 落盘日志用同一个基准（DSH_HOME || homedir），
- * 否则用户从设置页点"启动副驾"写的日志，这里却去别的目录读，会显示"无日志"。
+ * 否则用户从设置页点"启动助理"写的日志，这里却去别的目录读，会显示"无日志"。
  */
 function logSources() {
   const home = process.env.DSH_HOME || homedir();
@@ -831,7 +831,7 @@ export function apply(ctx, config) {
    */
   async function answerQuestion(body) {
     if (!session.settings.askEnabled) {
-      return { ok: false, reason: 'ask-disabled', message: '按键问答开关是关的（设置页 → 游戏副驾）' };
+      return { ok: false, reason: 'ask-disabled', message: '按键问答开关是关的（设置页 → 游戏助理）' };
     }
     const question = String(body?.question ?? '').trim();
     if (!question) return { ok: false, reason: 'empty-question', message: '问题为空' };
@@ -1059,7 +1059,7 @@ function publicConfig(config) {
 // 这样试听听到的就是下一句话会用的声音（音色/语速/音量全都如实传过去）。
 const COPILOT_ROOT = process.env.AI_COPILOT_HOME || path.resolve(HERE, '..', '..', '..', 'runtime');
 
-/** 找副驾那套 Python 解释器（必须是 python.exe，pythonw 读不到输出）。 */
+/** 找助理那套 Python 解释器（必须是 python.exe，pythonw 读不到输出）。 */
 function copilotPython() {
   const explicit = process.env.AI_COPILOT_PYTHON;
   if (explicit && existsSync(explicit)) return explicit;

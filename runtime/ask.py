@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-r"""游戏内 AI 副驾一键问答：截图 -> 本地视觉模型 -> TTS 播报。
+r"""游戏内 AI 助理一键问答：截图 -> 本地视觉模型 -> TTS 播报。
 
 用法：
   ask.py "矿机为什么停了"
@@ -29,7 +29,7 @@ OUT_DIR = ROOT / "out"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 SYSTEM_PROMPT = (
-    "你是玩家电脑上的游戏副驾。先用截图认出正在玩哪款游戏，再按那款游戏的玩法作答；"
+    "你是玩家电脑上的游戏助理。先用截图认出正在玩哪款游戏，再按那款游戏的玩法作答；"
     "没认出来就按画面里的实际局势答，别硬套别的游戏。"
     "用中文口语回答，把结论说成完整的句子，不要只回答一个数字、一个词或几个字。"
     "算数题：按用户给的数字算准，只回答一句结论句，不要复述题目条件、不要写推导过程。"
@@ -42,10 +42,10 @@ SYSTEM_PROMPT = (
 )
 
 
-# 这些是副驾自己/宿主/常见工具窗口，不该当成"正在玩的游戏"去截。
+# 这些是助理自己/宿主/常见工具窗口，不该当成"正在玩的游戏"去截。
 # 只按标题排除，命中就跳过；其余任何可见大窗口都算游戏（不写死具体游戏名）。
 NON_GAME_HINTS = (
-    "dsh-game-copilot", "dsh-game-pet", "game pet", "桌宠", "副驾", "deepseek harness",
+    "dsh-game-copilot", "dsh-game-pet", "game pet", "桌宠", "助理", "deepseek harness",
     "settings", "设置", "workbuddy", "codebuddy", "powershell", "cmd",
     "explorer", "资源管理器", "terminal", "visual studio", "cursor",
 )
@@ -461,7 +461,7 @@ def wav_seconds(path: str) -> float:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="游戏副驾：截图问本地模型并念出来")
+    parser = argparse.ArgumentParser(description="游戏助理：截图问本地模型并念出来")
     parser.add_argument("question", nargs="?", default="", help="要问的问题")
     parser.add_argument("--clipboard", action="store_true", help="从剪贴板读取问题")
     parser.add_argument("--no-shot", action="store_true", help="不截屏，只按文字问")

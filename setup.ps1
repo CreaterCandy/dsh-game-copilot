@@ -53,7 +53,7 @@ if (-not (Test-Path $localCfg)) {
 
 Write-Step '4/5 准备语音识别模型（约 464MB，首次要联网）'
 # 不预下载的话，第一次按键会在 transcribe 里卡在联网下模型：
-# 反馈音只响前两声、后续按键被 _busy 吞掉，表现得像"副驾死了"。
+# 反馈音只响前两声、后续按键被 _busy 吞掉，表现得像"助理死了"。
 & (Join-Path $root 'tools\fetch-model.ps1') -RuntimeDir $runtime -PythonExe $python
 if ($LASTEXITCODE -ne 0) {
     Write-Host '模型准备未完全成功，不影响其他功能；首次语音问答可能慢一点' -ForegroundColor Yellow
@@ -89,5 +89,5 @@ Write-Step '完成'
 Write-Host '下一步：' -ForegroundColor Green
 Write-Host '  1) 启动 DSH，在设置页打开「桌宠参谋 → 模型与能力」，填一个 OpenAI 兼容端点'
 Write-Host '  2) 点「测一下」，让插件判断这个端点能不能看图'
-Write-Host '  3) 点顶部「启动副驾」，之后按住 Caps Lock 说话即可'
+Write-Host '  3) 点顶部「启动游戏助理」，之后按住 Caps Lock 说话即可'
 Write-Host '  设置页也可以直接浏览器打开：http://127.0.0.1:<DSH端口>/dsh-game-copilot-7341/settings'

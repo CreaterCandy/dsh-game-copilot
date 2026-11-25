@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ================================================================================
-是什么：游戏内 AI 副驾的 TTS 统一接口骨架（可切换后端 + 降级链）
+是什么：游戏内 AI 助理的 TTS 统一接口骨架（可切换后端 + 降级链）
 给谁  ：本项目维护者与使用者（Windows）
 怎么用 ：见下方「快速开始」；详细说明看同目录 README.md。
 when  ：2026-11-23
@@ -34,7 +34,7 @@ when  ：2026-11-23
     # 3) 显式切到某个后端
     python tts_interface.py "你好" --backend edge_tts -o runtime/reply.wav
 
-    # 4) 在副驾代码里调用（只认这一个函数）
+    # 4) 在助理代码里调用（只认这一个函数）
     from tts_interface import get_tts
     tts = get_tts()                      # 默认读 config.json
     tts.synthesize("矿机缺煤，把传送带接上就行。", r"runtime/reply.wav")
@@ -185,7 +185,7 @@ def _split_long(seg: str, limit: int) -> List[str]:
 # 统一接口
 # ---------------------------------------------------------------------------
 class TTSBackend(abc.ABC):
-    """所有 TTS 后端都要实现这三个方法。副驾代码只依赖这个抽象。"""
+    """所有 TTS 后端都要实现这三个方法。助理代码只依赖这个抽象。"""
 
     name: str = "base"
 
@@ -983,7 +983,7 @@ class TTSRouter:
             print(f"实际会用: {chosen}")
 
 
-# 模块级便捷函数：副驾代码里 from tts_interface import get_tts 即可
+# 模块级便捷函数：助理代码里 from tts_interface import get_tts 即可
 _default_router: Optional[TTSRouter] = None
 
 
@@ -1043,7 +1043,7 @@ def list_all_voices(show_all: bool = False) -> None:
 def _cli(argv: List[str]) -> int:
     import argparse
 
-    parser = argparse.ArgumentParser(description="游戏副驾 TTS 接口（可切换后端）")
+    parser = argparse.ArgumentParser(description="游戏助理 TTS 接口（可切换后端）")
     parser.add_argument("text", nargs="?", help="要念的文字")
     parser.add_argument("-o", "--out", default=str(HERE / "reply.wav"), help="输出音频路径")
     parser.add_argument("--backend", default=None, help="显式指定后端；不填按 config.json")

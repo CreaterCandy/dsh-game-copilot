@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-r"""游戏副驾 · Push-to-Talk 守护（按住说话、松开出结果）。
+r"""游戏助理 · Push-to-Talk 守护（按住说话、松开出结果）。
 
 与旧 hotkey_ask.pyw 的区别：
   * 热键全部从 runtime\config.json 读，可随时改，不写死在代码里。
@@ -210,7 +210,7 @@ def _register_oneshot_hotkeys() -> None:
         if getattr(e, "winerror", None) != 1409:
             raise
         msg = (
-            "AI 副驾启动失败：热键已被占用。\n\n"
+            "AI 助理启动失败：热键已被占用。\n\n"
             "最常见的情况是旧实例还在后台跑着（它占着 Caps Lock 等热键），\n"
             "所以新实例起不来，改了配置也不会生效。也可能是别的软件占了同一组热键。\n\n"
             "处理办法（任选一种）：\n"
@@ -223,7 +223,7 @@ def _register_oneshot_hotkeys() -> None:
         except Exception:
             pass
         try:
-            win32gui.MessageBox(0, msg, "AI 副驾 · 已在运行", 0x00000030)  # MB_ICONWARNING
+            win32gui.MessageBox(0, msg, "AI 助理 · 已在运行", 0x00000030)  # MB_ICONWARNING
         except Exception:
             pass
         raise SystemExit(1)

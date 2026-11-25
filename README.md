@@ -1,4 +1,4 @@
-# dsh-game-copilot · 游戏副驾 DSH 插件
+# dsh-game-copilot · DSH游戏助理
 
 打游戏时按住一个键说话，它看一眼当前画面，把建议显示在桌宠气泡里，同时念出来。不方便说话就按热键打字问。
 
@@ -51,7 +51,7 @@ http://127.0.0.1:<DSH端口>/dsh-game-copilot-7341/settings
 
 **3. 启动**
 
-点设置页顶部「启动副驾」，或双击 `start_copilot.cmd`。
+点设置页顶部「启动游戏助理」，或双击 `start_copilot.cmd`。
 
 | 热键 | 作用 |
 |---|---|

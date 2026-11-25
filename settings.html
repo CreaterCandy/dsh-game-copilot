@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html data-page-node-id="IXJcFOE7HRBEJOV9oknpzG" lang="zh-CN" data-theme="light"><head data-page-node-id="NZhorbBeTgyTy9mIVi9E9r">
 <meta data-page-node-id="SxVAQPvWxU4OLKWeFXIZ7H" charset="utf-8">
-<title data-page-node-id="K02bRe9rcqxW7xoVDovsHq" data-pnid-children="sWv7ZP7U3U7X5Pa78PjnLj">游戏副驾 · 设置（折叠版原型）</title>
+<title data-page-node-id="K02bRe9rcqxW7xoVDovsHq" data-pnid-children="sWv7ZP7U3U7X5Pa78PjnLj">DSH游戏助理 · 设置</title>
 <style data-page-node-id="A5ynRk5HUlkHmLnkA4eDE4" data-pnid-children="VBjzu3GSgJFf9CSLc7L3dr">
 /* ── 设计变量：与插件 client.js 里的 --dsw-alias-* 同名，这里给出明/暗两套值 ── */
 :root{
@@ -209,7 +209,7 @@ body.embed .wrap{gap:12px;}
 <div data-page-node-id="2vDOuv87hqZr4aeBOqC5g2" class="wrap">
 
   <div data-page-node-id="fIBCnHRAF6KiP90RlOAJa8">
-    <h1 data-page-node-id="F0AtI5MTn5ImYw6ljCjcrq">游戏副驾 · 设置</h1>
+    <h1 data-page-node-id="F0AtI5MTn5ImYw6ljCjcrq">DSH游戏助理 · 设置</h1>
     <p data-page-node-id="3DF2CL2DypJNAcThipKX1T" class="sub">折叠版设置面板 · 配置即时生效</p>
   </div>
 
@@ -232,7 +232,7 @@ body.embed .wrap{gap:12px;}
 
   <!-- 运行状态条：一个按钮启动/停止整条链路 -->
   <div data-page-node-id="XkFy99oovvoVm7HlLclejx" class="runbar">
-    <span data-page-node-id="xTwRtep1NYjUDHURRcItdv" class="runbar__t">副驾</span>
+    <span data-page-node-id="xTwRtep1NYjUDHURRcItdv" class="runbar__t">游戏助理</span>
     <span data-page-node-id="JRgkSN0HBhaqppwTdPEEPi" class="run"><span data-page-node-id="PXiOQn3DzcYvBC37H7x6yt" class="led" id="ledPtt"></span><span data-page-node-id="REyUx6I37MR3nUoLaDr1GM" id="txtPtt">按键守护 未运行</span></span>
     <span data-page-node-id="AORccEZsV3EbCL9uITyN5o" class="run"><span data-page-node-id="0MLXHTpRtvTrEEp4mrNDKL" class="led" id="ledBridge"></span><span data-page-node-id="7Q317jpHhRgdCzwmiOuioN" id="txtBridge">播报桥 未运行</span></span>
     <span data-page-node-id="qqjQYEMHAD95iQl5vEHomC" class="runbar__sep"></span>
@@ -242,7 +242,7 @@ body.embed .wrap{gap:12px;}
     <button data-page-node-id="gY99rn2xt3RaQFNcF9GpIb" class="btn btn--sm" id="btnWin">隐藏小窗</button>
     <button data-page-node-id="526mt7LxOzUNeagdbGYwbM" class="btn btn--sm" id="btnSave">保存设置</button>
     <span data-page-node-id="YDGAyyPF3ljj0Ey5dqa7e1" class="pill" id="saveState">演示模式 · 未连接后端</span>
-    <button data-page-node-id="7ZI8JqNJKRZLfLirhXwZ4V" class="btn btn--primary" id="btnRun">启动副驾</button>
+    <button data-page-node-id="7ZI8JqNJKRZLfLirhXwZ4V" class="btn btn--primary" id="btnRun">启动游戏助理</button>
   </div>
 
   <!-- L3 首启向导 -->
@@ -791,7 +791,7 @@ body.embed .wrap{gap:12px;}
   var runMeta = document.getElementById('runMeta');
   var cbAuto = document.getElementById('cbAuto');
 
-  // ── 小窗显隐：跟「启动副驾」完全独立（小窗由插件起，不依赖 ptt_voice） ──
+  // ── 小窗显隐：跟「启动助理」完全独立（小窗由插件起，不依赖 ptt_voice） ──
   var ledWin = document.getElementById('ledWin');
   var txtWin = document.getElementById('txtWin');
   var btnWin = document.getElementById('btnWin');
@@ -1323,7 +1323,7 @@ body.embed .wrap{gap:12px;}
       if (st && st.error) bits.push('状态检测异常');
       runMeta.textContent = bits.join(' · ');
       var active = pttOn || bridgeOn;
-      btnRunReal.textContent = active ? '停止' : '启动副驾';
+      btnRunReal.textContent = active ? '停止' : '启动游戏助理';
       btnRunReal.className = active ? 'btn' : 'btn btn--primary';
       btnRunReal.disabled = false;
       if (cbAuto && st && st.autoEnabled !== undefined) cbAuto.checked = autoOn;
@@ -1524,7 +1524,7 @@ body.embed .wrap{gap:12px;}
           if (!r || !r.ok) { logMeta.textContent = '读取失败：' + ((r && r.message) || '未知错误'); logList.innerHTML = ''; logData = null; return; }
           logData = r;
           if (!r.exists || !r.rows.length) {
-            logList.innerHTML = '<div class="logempty">这个日志还没有内容。先问一句或启动副驾试试。</div>';
+            logList.innerHTML = '<div class="logempty">这个日志还没有内容。先问一句或启动助理试试。</div>';
           } else {
             logList.innerHTML = r.rows.map(rowHtml).join('');
           }

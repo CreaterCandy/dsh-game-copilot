@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-r"""游戏副驾 · 语音输入：按住热键说话 -> 本地 ASR 转写 -> 复用 ask.py 的截图问答+TTS 播报。
+r"""游戏助理 · 语音输入：按住热键说话 -> 本地 ASR 转写 -> 复用 ask.py 的截图问答+TTS 播报。
 
 两种用法：
   1) 被 hotkey_ask.pyw 调用（推荐）：
