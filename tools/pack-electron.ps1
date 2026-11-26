@@ -109,6 +109,6 @@ Write-Host "校验值：$sums" -ForegroundColor Green
 Write-Host "SHA256：$sha" -ForegroundColor Green
 Write-Host ''
 Write-Host '下一步（只需做一次）：' -ForegroundColor Green
-Write-Host "  1) 把这个 zip 上传到一个固定 tag 的 Release，例如 assets-v1（说明里写明「共享大件，请勿删除」）；" -ForegroundColor Green
+Write-Host "  1) 把这个 zip 追加到 v1.0.0 的 Release（模型也在那儿），命令：gh release upload v1.0.0 <zip>；" -ForegroundColor Green
 Write-Host "  2) 把直链与 SHA256 填进 config\release.json 的 electronMirrorUrl / electronSha256 / electronVersion。" -ForegroundColor Green
 Write-Host '  以后每个代码版本都指向它，不用再重传。' -ForegroundColor DarkGray

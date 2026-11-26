@@ -1,10 +1,10 @@
 {
-  "_说明": "维护者填：大件资产的直链与 SHA256。GitHub 的 release 资产链接是永久的，所以模型和 Electron 各只上传一次，之后所有代码版本继续指向同一个 tag，发版时不用重传。留空则走各自的官方源（模型→HuggingFace 官方下载；Electron→不自动下载，只有本机已装才能用）。",
+  "_说明": "维护者填：大件资产的直链与 SHA256。GitHub 的 release 资产链接是永久的，所以模型和 Electron 各只上传一次（都挂在 v1.0.0 那个 Release 上），之后所有代码版本继续指向同一个 tag，发版时不用重传。留空则走各自的官方源（模型→HuggingFace 官方下载；Electron→不自动下载，只有本机已装才能用）。",
   "_模型": "约 425.8MB，已在 v1.0.0 的 Release 上，无需重传。解压后落在 runtime\\ 下得到 models\\。",
   "modelMirrorUrl": "https://github.com/CreaterCandy/dsh-game-copilot/releases/download/v1.0.0/dsh-game-copilot-model-small.zip",
   "modelSha256": "455a9dbbd348e28e27988148bea27c2ce4756cd095ddbf71a4b3761a51baa9cc",
-  "_Electron": "约 103.8MB，传到 assets-v1 这个固定 tag 的 Release（说明里写「共享大件，请勿删除」）。只有换 Electron 版本时才需要重打并更新这三行。",
-  "electronMirrorUrl": "https://github.com/CreaterCandy/dsh-game-copilot/releases/download/assets-v1/dsh-game-copilot-electron-30.5.1.zip",
+  "_Electron": "约 103.8MB，追加到 v1.0.0 的 Release（模型也在那儿，一个 tag 装两个大件）。只有换 Electron 版本时才需要重打、重新上传并更新这三行。",
+  "electronMirrorUrl": "https://github.com/CreaterCandy/dsh-game-copilot/releases/download/v1.0.0/dsh-game-copilot-electron-30.5.1.zip",
   "electronSha256": "ca975837dc850265edc15d60f0055596ef438f3a479c1023f201789cfae4a0b3",
   "electronVersion": "30.5.1"
 }
