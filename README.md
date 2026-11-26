@@ -32,25 +32,34 @@
 | Python 3.10+ | 是 | 安装时勾选 **Add to PATH** |
 | DSH（DeepSeek Harness） | 是 | 提供插件宿主与 HTTP 端口；先装并启动一次 |
 | OpenAI 兼容模型端点 | 是 | 本地 Ollama / LM Studio / llama.cpp，或云端 API；key 只填在设置页 |
-| Electron | 否 | 透明置顶小窗的运行时。**完整包已内置，`setup.ps1` 会自动装好**，不用你另外下载；只有用 `-NoElectron` 轻量包时才需自备 |
+| Electron | 否 | 透明置顶小窗的运行时（约 100MB）。**`setup.ps1` 首次运行会自动下载并校验**，不用你手动准备；本机已有则跳过 |
 | NVIDIA 独显 | 否 | 没有就走 CPU，功能不变只是慢；GPU 需 CUDA 12 的 cuBLAS 与 cuDNN 9 |
 
 ## 快速开始
 
-**1. 下载完整包并安装**（推荐）
+**1. 下载发布包并安装**（推荐）
 
-到 [Releases](https://github.com/CreaterCandy/dsh-game-copilot/releases) 下载最新的 `dsh-game-copilot-<版本>-full.zip`（约 540MB，已含语音识别模型 + 桌宠小窗运行时），解压得到 `dsh-game-copilot` 文件夹，在其中打开 PowerShell 运行：
+到 [Releases](https://github.com/CreaterCandy/dsh-game-copilot/releases) 下载最新的 `dsh-game-copilot-<版本>.zip`（**约 8MB，只有代码**），解压得到 `dsh-game-copilot` 文件夹，在其中打开 PowerShell 运行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
-脚本会建 `runtime\venv`、装依赖、落两份默认配置、把插件装进 DSH，并把包内的 Electron 装到 DSH 目录（约 255MB，一次性）。模型和 Electron 都已经在包里，**不会再联网下那 464MB + 255MB**，只需联网装 pip 依赖。已有配置和已装的 Electron 不会被覆盖，重跑安全。
+脚本会建 `runtime\venv`、装依赖、落两份默认配置、把插件装进 DSH，并**在首次运行时下载两个大件**：
 
-> 想校验下载是否完整：Releases 里同时提供 `SHA256SUMS-full.txt`，用 `Get-FileHash <zip> -Algorithm SHA256` 对比即可。
+| 大件 | 体积 | 装到哪 |
+|---|---|---|
+| 语音识别模型（faster-whisper small） | 约 430MB | `runtime\models\` |
+| 桌宠小窗的 Electron 运行时 | 约 100MB | `%DSH_HOME%\electron\` |
+
+两个都是**一次性的**：重跑 `setup.ps1` 检测到已就绪会直接跳过，不会重复下载。下载过程自动比对 SHA256，坏了会报错而不是静默装坏。已有配置和已装的 Electron 不会被覆盖，重跑安全。
+
+> 想校验代码包：Releases 里同时提供 `SHA256SUMS-code.txt`，用 `Get-FileHash <zip> -Algorithm SHA256` 对比即可。
+>
+> **网络不好 / 不想让它联网下大件**：到 [Releases](https://github.com/CreaterCandy/dsh-game-copilot/releases) 找 `-full.zip`（约 540MB，模型和 Electron 都在包里），这条路全程不下载大件。若那一版没提供 `-full.zip`，说明该版本只发了代码包。
 
 <details>
-<summary>另一种方式：用 Git 克隆（仓库不含模型和 Electron，走 Release 下载或自备）</summary>
+<summary>另一种方式：用 Git 克隆（仓库不含模型和 Electron，由 setup.ps1 从 Release 下载）</summary>
 
 ```bash
 git clone https://github.com/CreaterCandy/dsh-game-copilot.git
@@ -58,9 +67,7 @@ cd dsh-game-copilot
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
-仓库不含模型，但 Releases 里提供了单独的模型包 `dsh-game-copilot-model-small.zip`。正式发布时 `config/release.json` 会预置它的直链和 SHA256，脚本会自动下载并校验，这一路不用碰 HuggingFace；只有校验失败或镜像不可用时才回退官方源。校验值见 Releases 里的 `SHA256SUMS.txt`。
-
-克隆这条路也没有 Electron。想要小窗就自己放一份：把 Electron 发行包解压到 `%DSH_HOME%\electron`（该目录下能直接看到 `electron.exe`），或设环境变量 `DSH_GAME_PET_ELECTRON` 指向现成的 `electron.exe`。不放也能用，只是没有桌面小窗、只剩气泡与语音。
+仓库本身不含大件。`config/release.json` 预置了模型包和 Electron 包的直链与 SHA256，`setup.ps1` 会自动下载并校验，不用碰 HuggingFace；只有模型镜像校验失败或不可用时才回退官方源。校验值见 Releases 里对应的 `SHA256SUMS*.txt`。
 
 </details>
 
@@ -127,7 +134,7 @@ node tools\test-server.mjs
 
 - **不做全屏感知**：真独占全屏下置顶窗本来就被盖住；窗口化全屏就是普通窗口，桌宠浮着符合预期。双屏用户把小窗拖到副屏即可。
 - **ASR 默认 small**：中文游戏专名识别一般，但不吃显存；换更大的模型需自行权衡显存与空闲卸载。
-- **Electron 随完整包分发**：置顶小窗只能用 Electron 起（透明、无边框、盖在游戏上层、点击穿透），浏览器页面做不到；上游 `dsh-game-pet` 是蹭 `dsh-pet` 下载的那份，本仓库独立分发没有那份可蹭，所以完整包直接内置并由 `setup.ps1` 装到 `%DSH_HOME%\electron`。用 `-NoElectron` 轻量包或 `git clone` 时才需自备，缺了只丢小窗，气泡与问答链路正常。
+- **Electron 由 `setup.ps1` 装到 `%DSH_HOME%\electron`**：置顶小窗只能用 Electron 起（透明、无边框、盖在游戏上层、点击穿透），浏览器页面做不到；上游 `dsh-game-pet` 是蹭 `dsh-pet` 下载的那份，本仓库独立分发没有那份可蹭。所以 Electron 运行时作为共享资产放在 Release，`setup.ps1` 首次运行时下载（约 100MB）并校验，解压到 DSH 目录——不用 npm 也不用你手动准备。缺了只丢小窗，气泡与问答链路正常。
 - **动画素材禁商用**：非商用个人分享没问题，商业用途必须替换，见 `THIRD_PARTY_NOTICES.md`。
 
 ## 许可与致谢

@@ -1,13 +1,14 @@
 ﻿# setup.ps1 —— 一次性安装（Windows PowerShell 5.1 可直接跑）
 #
 # 做五件事：
-#   1. 检查 Python，并把桌宠小窗用的 Electron 装好（完整包自带，无需你另外下载）
+#   1. 检查 Python，并把桌宠小窗用的 Electron 装好（包内自带优先；纯代码包会从 Release 下，约 100MB 只需一次）
 #   2. 建 runtime\venv 并装 requirements.txt
 #   3. 把 config.example.json 落成 config.json（已存在则不动）
 #   4. 准备语音识别模型（优先 Release 镜像 + SHA256 校验，失败回退官方源）
 #   5. 把 plugin\ 装进 DSH 的 desktop profile，并写设置页默认配置
 #
 # 全程不覆盖用户已有配置；重跑是安全的。
+# 大件（模型约 430MB、Electron 约 100MB）都只在首次安装时下载一次，之后重跑会跳过。
 #
 # 用法：
 #   .\setup.ps1                  完整安装
@@ -65,6 +66,90 @@ function Install-BundledElectron {
     return $null
 }
 
+# 大文件下载：PowerShell 5.1 的 Invoke-WebRequest 会把整个响应读进内存再写盘，
+# 下 400MB+ 的模型又慢又占内存。BITS 支持断点续传、有原生进度条，优先用它；
+# 拿不到（服务被禁等）就退回流式写盘的 WebClient。
+# ⚠️ tools\fetch-model.ps1 里有一份同样的实现，改这里要同步那边。
+function Save-RemoteFile {
+    param([string]$Url, [string]$OutFile, [string]$Label = '文件')
+    if (Get-Command Start-BitsTransfer -ErrorAction SilentlyContinue) {
+        try {
+            Start-BitsTransfer -Source $Url -Destination $OutFile -Description $Label -ErrorAction Stop | Out-Null
+            if (Test-Path -LiteralPath $OutFile) { return }
+        } catch {
+            Write-Host "  BITS 下载失败，改用直连：$($_.Exception.Message)" -ForegroundColor DarkGray
+            Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue
+        }
+    }
+    $wc = New-Object System.Net.WebClient
+    try {
+        $wc.Headers.Add('User-Agent', 'dsh-game-copilot-setup')
+        $wc.DownloadFile($Url, $OutFile)
+    } finally {
+        $wc.Dispose()
+    }
+}
+
+# 联网装 Electron：给"下的是纯代码包"的人用。
+# 资产只在 Release 上传一次，所有代码版本共用同一个直链（GitHub 的 release 资产链接是永久的），
+# 所以这里读的是 config\release.json，不写死版本号；换 Electron 版本才需要改配置。
+function Install-ElectronFromRelease {
+    $cfgPath = Join-Path $root 'config\release.json'
+    if (-not (Test-Path -LiteralPath $cfgPath)) { return $null }
+
+    $url = ''
+    $sha = ''
+    try {
+        # 显式按 UTF-8 读：PowerShell 5.1 默认按 ANSI 读无 BOM 文件，会把中文说明读坏
+        $cfg = ([IO.File]::ReadAllText($cfgPath, [Text.Encoding]::UTF8)) | ConvertFrom-Json
+        if ($cfg.electronMirrorUrl) { $url = [string]$cfg.electronMirrorUrl }
+        if ($cfg.electronSha256) { $sha = ([string]$cfg.electronSha256).Trim().ToLowerInvariant() }
+    } catch {
+        Write-Host "  读取 config\release.json 失败：$($_.Exception.Message)" -ForegroundColor Yellow
+        return $null
+    }
+    if (-not $url) { return $null }
+
+    $tag = [guid]::NewGuid().ToString('N')
+    $zip = Join-Path ([IO.Path]::GetTempPath()) "dsh-electron-$tag.zip"
+    $stage = Join-Path ([IO.Path]::GetTempPath()) "dsh-electron-$tag"
+    try {
+        Write-Host '  下载 Electron 运行时（约 100MB，只需一次）…' -ForegroundColor Cyan
+        Write-Host "  $url" -ForegroundColor DarkGray
+        Save-RemoteFile -Url $url -OutFile $zip -Label 'Electron 运行时'
+
+        if ($sha) {
+            $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $sha) { throw "SHA256 不匹配：期望 $sha，实际 $actual" }
+            Write-Host '  SHA256 校验通过。' -ForegroundColor Green
+        } else {
+            Write-Host '  未配置 SHA256，跳过校验（维护者请在 config\release.json 补上）。' -ForegroundColor Yellow
+        }
+
+        Expand-Archive -LiteralPath $zip -DestinationPath $stage -Force
+        $src = Join-Path $stage 'electron'
+        if (-not (Test-Path -LiteralPath (Join-Path $src 'electron.exe'))) {
+            throw '压缩包里没有 electron\electron.exe'
+        }
+        $dest = Join-Path $homeDir 'electron'
+        New-Item -ItemType Directory -Path $dest -Force | Out-Null
+        Copy-Item -Path (Join-Path $src '*') -Destination $dest -Recurse -Force -ErrorAction Stop
+        $target = Join-Path $dest 'electron.exe'
+        if (Test-Path -LiteralPath $target) {
+            Write-Host "  Electron 已装到 $dest" -ForegroundColor Green
+            return $target
+        }
+        return $null
+    } catch {
+        Write-Host "  Electron 下载 / 安装失败：$($_.Exception.Message)" -ForegroundColor Yellow
+        return $null
+    } finally {
+        Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
+        # 用 .NET 递归删：Remove-Item -Recurse 在部分安全策略下会按"一次删 N 个文件"被拦并抛错
+        try { if (Test-Path -LiteralPath $stage) { [IO.Directory]::Delete($stage, $true) } } catch { }
+    }
+}
+
 # 只装 Electron：给"下了轻量包、后来想要小窗"的人补装用，也是这段逻辑的独立测试入口。
 if ($OnlyElectron) {
     Write-Step '只安装 Electron（-OnlyElectron）'
@@ -74,14 +159,16 @@ if ($OnlyElectron) {
         exit 0
     }
     $installed = Install-BundledElectron
+    if (-not $installed) { $installed = Install-ElectronFromRelease }
     if ($installed) {
         Write-Host "  装好了：$installed" -ForegroundColor Green
         Write-Host '  重启 DSH（或在设置页点一下小窗开关）就会生效。' -ForegroundColor DarkGray
         exit 0
     }
-    Write-Host '  没装成：包内没有 electron\ 目录，系统里也没找到现成的 Electron。' -ForegroundColor Yellow
-    Write-Host '  两种办法：① 换用带 Electron 的完整包（Release 里的 -full.zip）；' -ForegroundColor Yellow
-    Write-Host '            ② 设环境变量 DSH_GAME_PET_ELECTRON 指向现成的 electron.exe。' -ForegroundColor Yellow
+    Write-Host '  没装成：包内没有 electron\ 目录，也没能从 Release 下载到。' -ForegroundColor Yellow
+    Write-Host '  三种办法：① 换用带 Electron 的完整包（Release 里的 -full.zip）；' -ForegroundColor Yellow
+    Write-Host '            ② 检查网络后重跑本脚本（会从 config\release.json 的直链下载）；' -ForegroundColor Yellow
+    Write-Host '            ③ 设环境变量 DSH_GAME_PET_ELECTRON 指向现成的 electron.exe。' -ForegroundColor Yellow
     exit 1
 }
 
@@ -165,8 +252,12 @@ requirements.txt 里锁定的 numpy 2.5.x 只支持 3.12+，低版本装不上�
 
 $electron = Find-ElectronBinary
 if (-not $electron) {
-    # 完整包自带 Electron，这里直接落地；轻量包没有才落到下面的提示分支
+    # 完整包自带 Electron，这里直接落地
     $electron = Install-BundledElectron
+}
+if (-not $electron) {
+    # 纯代码包没有 Electron，从 Release 下（约 100MB，只需一次）
+    $electron = Install-ElectronFromRelease
 }
 if ($electron) {
     Write-Host "  Electron -> $electron" -ForegroundColor DarkGray

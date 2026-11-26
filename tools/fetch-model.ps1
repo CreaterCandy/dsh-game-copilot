@@ -29,6 +29,30 @@ if (Test-ModelReady) {
     exit 0
 }
 
+# 大文件下载：PowerShell 5.1 的 Invoke-WebRequest 会把整个响应读进内存再写盘，
+# 下 400MB+ 的模型又慢又占内存。BITS 支持断点续传、有原生进度条，优先用它；
+# 拿不到（服务被禁等）就退回流式写盘的 WebClient。
+# ⚠️ setup.ps1 里有一份同样的实现，改这里要同步那边。
+function Save-RemoteFile {
+    param([string]$Url, [string]$OutFile, [string]$Label = '文件')
+    if (Get-Command Start-BitsTransfer -ErrorAction SilentlyContinue) {
+        try {
+            Start-BitsTransfer -Source $Url -Destination $OutFile -Description $Label -ErrorAction Stop | Out-Null
+            if (Test-Path -LiteralPath $OutFile) { return }
+        } catch {
+            Write-Host "  BITS 下载失败，改用直连：$($_.Exception.Message)" -ForegroundColor DarkGray
+            Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue
+        }
+    }
+    $wc = New-Object System.Net.WebClient
+    try {
+        $wc.Headers.Add('User-Agent', 'dsh-game-copilot-setup')
+        $wc.DownloadFile($Url, $OutFile)
+    } finally {
+        $wc.Dispose()
+    }
+}
+
 $mirrorUrl = ''
 $expectedSha = ''
 if (Test-Path $releaseCfg) {
@@ -46,8 +70,8 @@ if (Test-Path $releaseCfg) {
 if ($mirrorUrl) {
     $zip = Join-Path ([IO.Path]::GetTempPath()) ("dsh-game-copilot-model-" + [guid]::NewGuid().ToString('N') + '.zip')
     try {
-        Write-Host "从 Release 镜像下载模型包：$mirrorUrl" -ForegroundColor Cyan
-        Invoke-WebRequest -Uri $mirrorUrl -OutFile $zip -UseBasicParsing
+        Write-Host "从 Release 镜像下载模型包（约 430MB，只需一次）：$mirrorUrl" -ForegroundColor Cyan
+        Save-RemoteFile -Url $mirrorUrl -OutFile $zip -Label 'ASR 模型包'
 
         if ($expectedSha) {
             $actualSha = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
