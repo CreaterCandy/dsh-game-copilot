@@ -39,7 +39,7 @@ import {
   matchesGame,
   normalizeConfig,
 } from './config.mjs';
-import { migrateAutoSpeakOff, readUserConfig, writeUserConfig } from './config-store.mjs';
+import { migrateAutoSpeakOff, migrateTtsSpeedDefault, readUserConfig, writeUserConfig } from './config-store.mjs';
 import { electronBinary, startOverlayWindow } from './desktop-window.mjs';
 import { redactVisionApi, testCustomApi } from './vision-api.mjs';
 import { runProbe } from './http-llm.mjs';
@@ -238,6 +238,11 @@ export function apply(ctx, config) {
   if (migrateAutoSpeakOff()) {
     log('warn', '自动开口的默认值已改为「关闭」（旧版默认开着）：要它主动说话，请在设置页打开「玩游戏时自动开口」');
   }
+  // 旧版出厂语速是 1.2 倍（SAPI speed=1 / Edge +20%），UI 却叫"档位"，看着像 1 倍速。
+  // 新版默认 1.0 倍，只在用户从没动过语音设置时纠正一次。
+  if (migrateTtsSpeedDefault()) {
+    log('warn', '语速默认值已改为「1.0 倍（原速）」（旧版出厂是 1.2 倍）：想调回来在设置页「音色 / 语速」选');
+  }
   // 用户覆盖（设置页改的）叠在行配置之上：行配置是"出厂默认/部署默认"，用户改的进 config.json
   const settings = normalizeConfig({ ...(config ?? {}), ...readUserConfig() });
 
@@ -260,6 +265,10 @@ export function apply(ctx, config) {
     /** 上次写进 state 的那句 advice 的 at：publish 每秒跑，但同一句只写一次，
      *  否则 advice counter 每秒递增，前端气泡计时器被无限重置 → 永不消失。 */
     publishedAdviceAt: 0,
+    /** 识图连续失败次数（熔断用）：>=3 就暂停自动开口一段时间，只提示一次 */
+    visionFailStreak: 0,
+    /** 熔断到期时间戳（0 = 没暂停） */
+    visionPausedUntil: 0,
   };
   /** 置顶小窗的句柄：Ctrl+Alt+T 要靠它判断"气泡输入条能不能弹在宠物头顶"。 */
   let overlayHandle = null;
@@ -878,6 +887,8 @@ export function apply(ctx, config) {
 
     const now = Date.now();
     if (session.busy) return;
+    // 识图连续失败后熔断：停一会儿，别每轮都去撞同一个错
+    if (session.visionPausedUntil && now < session.visionPausedUntil) return;
     if (now - session.startedAt < session.settings.warmupMs) return;
     if (session.lastSpokeAt && now - session.lastSpokeAt < session.settings.minGapMs) return;
     if (session.lastSpokeAt && now - session.lastSpokeAt < session.settings.intervalSec * 1000) return;
@@ -933,7 +944,28 @@ export function apply(ctx, config) {
         session.lastError = { at: Date.now(), reason: result.reason, message: result.message ?? '' };
         log('warn', `advice failed: ${result.reason} ${result.message ?? ''}`);
         // 识图失败时把"候选是怎么算出来的"打一行日志：这类问题光看报错没法定位
-        if (result.reason === 'vision-failed' || result.reason === 'vision-model-missing') {
+        const visionish =
+          result.reason === 'vision-unavailable' ||
+          result.reason === 'vision-failed' ||
+          result.reason === 'vision-model-missing';
+        if (visionish) {
+          // 连续识图失败要熔断：以前每 45 秒弹一条同样的「没找到可用的识图模型 / 429」，
+          // 用户以为"关了开关还在说"，实际是自动播报在反复撞同一个错（work 侧实测）。
+          // 现在连撞 3 次就停 15 分钟，并且只提示一次；成功一次立刻清零。
+          session.visionFailStreak += 1;
+          if (session.visionFailStreak >= 3 && Date.now() > session.visionPausedUntil) {
+            session.visionPausedUntil = Date.now() + 15 * 60 * 1000;
+            session.visionFailStreak = 0;
+            log('warn', 'vision failed 3x in a row, auto-speak paused for 15min');
+            session.lastAdvice = {
+              at: Date.now(),
+              say: '识图这边一直不通，我先安静会儿；去设置页看看「模型与能力」。',
+              screen: '',
+              mood: 'think',
+              animation: pickAnimation({ mood: 'think', seed: Date.now() }),
+              game: detection.title || detection.process || '',
+            };
+          }
           try {
             const report = await inspectVision({ ctx, config: session.settings });
             log(
@@ -947,6 +979,9 @@ export function apply(ctx, config) {
         publish();
         return { ok: false, ...session.lastError, elapsedMs: Date.now() - startedAt };
       }
+
+      session.visionFailStreak = 0;
+      session.visionPausedUntil = 0;
 
       session.lastError = null;
       if (image) session.snapshot = { at: Date.now(), data: image, screen: result.screen };
@@ -1095,7 +1130,10 @@ export function apply(ctx, config) {
     if (session.settings.ignoreMinimized && detection.minimized) return false;
     if (session.settings.requireFullscreen && !detection.fullscreen) return false;
     const list = session.settings.games;
-    if (!Array.isArray(list) || list.length === 0) return true;
+    // 空白名单默认不自动开口：旧行为是"任何前台窗口都算游戏"，
+    // 装上就在 Word/浏览器里每 45 秒截屏识图（work 侧实测被误伤）。
+    // 想恢复"什么窗口都算"的人，在设置页勾「任何窗口都算」→ autoAnyWindow。
+    if (!Array.isArray(list) || list.length === 0) return session.settings.autoAnyWindow === true;
     return list.some((pattern) => matchesGame(pattern, detection));
   }
 
@@ -1334,6 +1372,9 @@ async function previewTts({ settings, body }) {
   const args = [script, text, '--speak'];
   if (tts.voice) args.push('--voice', String(tts.voice));
   if (Number.isFinite(Number(tts.speed))) args.push('--speed', String(Number(tts.speed)));
+  // Edge 在线后端吃的是百分比（"+20%"），和 SAPI 的整数档是两套：只传 speed 的话
+  // 用默认 Edge 音色试听永远听不出变化（踩过）。
+  if (tts.edgeRate) args.push('--edge-rate', String(tts.edgeRate));
   if (Number.isFinite(Number(tts.volume))) args.push('--volume', String(Number(tts.volume)));
   if (tts.backend && tts.backend !== 'auto') args.push('--backend', String(tts.backend));
 

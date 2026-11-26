@@ -4,7 +4,7 @@
     "edge_tts",
     "sapi_fallback"
   ],
-  "speed": 1,
+  "speed": 0,
   "speed_note": "默认降级链两档：Edge 在线 → Windows 系统语音。第三档 offline_xiaoxiao 需自行安装微软自然人声语音包，设置页探测到真离线音色后才建议选用，不会进默认链。SAPI 系语速整数级 -10..10，1≈1.20x；edge_tts 用 backends.edge_tts.rate 的百分比，粒度更细。",
   "backends": {
     "offline_xiaoxiao": {
@@ -13,7 +13,7 @@
     },
     "edge_tts": {
       "voice": "zh-CN-XiaoyiNeural",
-      "rate": "+20%"
+      "rate": "+0%"
     },
     "sapi_fallback": {
       "voice_hint": "Huihui"

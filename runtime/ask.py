@@ -507,10 +507,32 @@ def main() -> int:
     from tts_interface import get_tts
 
     tts = get_tts()
+    # 设置页的「出声 / 音色 / 语速」对按键问答也要生效：ask.py 是独立进程，
+    # 只读 runtime/tts/config.json 的话，UI 上改档位等于没改（实测过）。
+    # 这里按插件配置套一次，失败就沿用本地 config.json，不让设置写错把问答弄哑。
+    muted = False
+    try:
+        import memory_store as _mem_tts
+
+        _p = _mem_tts.plugin_config().get("tts") or {}
+        if isinstance(_p, dict) and _p:
+            tts.apply_runtime(
+                backend=None if args.backend else (_p.get("backend") or None),
+                voice=_p.get("voice") or None,
+                speed=_p.get("speed"),
+                edge_rate=_p.get("edgeRate"),
+                volume=_p.get("volume"),
+            )
+            muted = _p.get("enabled") is False
+    except Exception as _e:  # 设置写错不该让整轮问答失败
+        print(f"[TTS] 套用设置页参数失败，沿用本地配置：{_e!r}", file=sys.stderr)
     out = str(OUT_DIR / "reply.wav")
-    if args.no_speak:
+    if args.no_speak or muted:
+        # no_speak = 调用方自己播；muted = 设置页把「出声」关了（只出字）
         used = tts.synthesize(answer, out, backend=args.backend)
         tts_stats: dict = {"backend": tts.get_backend(args.backend).name}
+        if muted:
+            tts_stats["muted"] = True
     else:
         # 分句流式：第一句合成完就开口，不用等全文
         tts_stats = tts.speak_streaming(answer, backend=args.backend, out_dir=str(OUT_DIR / "tts_seg"))

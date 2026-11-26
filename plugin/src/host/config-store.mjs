@@ -39,6 +39,9 @@ export function writeUserConfig(patch) {
     // 只要这次写的 patch 里带了 enabled，就说明用户自己表过态（设置页开关）。
     // 记一笔 autoOptIn，默认值迁移以后就不再动他——不能把"用户要开"又给关回去。
     if (Object.prototype.hasOwnProperty.call(patch ?? {}, 'enabled')) merged.autoOptIn = true;
+    // 同理：这次写带了 tts，说明用户在设置页动过语音（含倍速），
+    // 旧版"1.2 倍速"的出厂默认以后不再纠正他。
+    if (Object.prototype.hasOwnProperty.call(patch ?? {}, 'tts')) merged.autoRateOptIn = true;
     writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2), 'utf8');
     return true;
   } catch {
@@ -61,6 +64,26 @@ export function migrateAutoSpeakOff() {
   if (stored.autoOptIn) return false;
   if (stored.enabled !== true) return false;
   return writeUserConfig({ enabled: false });
+}
+
+/**
+ * 一次性迁移：旧版出厂语速是 1.2 倍（SAPI speed=1 / Edge rate=+20%）。
+ *
+ * 设置页却把它叫"档位"，用户看到 1 以为是 1 倍速，实测念得偏快。新版改成
+ * 倍速语义、默认 1.0 倍（speed=0 / edgeRate=+0%）。这里只纠正"从没表过态"的旧默认：
+ *   存盘 tts.speed 正好是 1、且没有 autoRateOptIn 标记 → 改成 0；
+ *   用户自己调过（有标记，或值不是 1）→ 一律不动，别把他选的 1.2 倍给改回去。
+ * 返回 true 表示这次真改了，调用方据此写一行日志。
+ */
+export function migrateTtsSpeedDefault() {
+  const stored = readUserConfig();
+  const tts = stored.tts;
+  if (!tts || typeof tts !== 'object') return false;
+  if (stored.autoRateOptIn) return false;
+  if (tts.speed !== 1) return false;
+  return writeUserConfig({
+    tts: { ...tts, speed: 0, edgeRate: tts.edgeRate ?? '+0%' },
+  });
 }
 
 export { CONFIG_FILE };

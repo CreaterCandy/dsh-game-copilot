@@ -127,16 +127,27 @@ export async function adviseOnce({ ctx, config, image, detection, notes, elapsed
 
   // ── 第 1 步：识图（有图才做）────────────────────────────────────────────
   let screen = '';
-  if (image && image.length > 0) {
-    const vision = await describeImage({ ctx, llmService, config, image, detection });
+  let visionError = '';
+  const hasImage = Boolean(image && image.length > 0);
+  if (hasImage) {
+    const vision = await describeImage({ ctx, llmService, config, image, detection, selection: target });
     if (vision.ok) screen = vision.text;
     else {
-      return { ok: false, reason: 'vision-failed', message: vision.message ?? '截图没能转成文字描述' };
+      // 有图但看不懂：**不降级成盲答**。盲答会顺着窗口标题编画面（按键那条踩过），
+      // 自动发言宁可这轮不说。失败原因带回上层做熔断——连续失败就暂停并只提示一次，
+      // 不能像以前那样每 45 秒弹一条「没找到可用的识图模型，HTTP 429」。
+      return {
+        ok: false,
+        reason: 'vision-unavailable',
+        message: vision.message ?? '截图没能转成文字描述',
+      };
     }
   }
 
   // ── 第 2 步：出话（纯文本）────────────────────────────────────────────
-  const prompt = buildPrompt({ detection, notes, elapsedMs, screen });
+  const basePrompt = buildPrompt({ detection, notes, elapsedMs, screen });
+  // 没截图时明确告诉模型"没图"，别让它编（以前 prompt 里那句"别编游戏内容"不够硬）
+  const prompt = hasImage ? basePrompt : `${basePrompt}\n\n${BLIND_TAIL_NOTE}`;
   const text = await callText({
     ctx,
     llmService,
@@ -147,7 +158,13 @@ export async function adviseOnce({ ctx, config, image, detection, notes, elapsed
   });
   if (!text.ok) return { ok: false, reason: text.reason, message: text.message };
 
-  const say = sanitizeSay(text.text);
+  let say = sanitizeSay(text.text);
+  // 输出后兜底：没图却开始描述画面 = 脑补，换回标准台词（与按键的 C9 同一套判定）
+  let blindCorrected = false;
+  if (say && !hasImage && blindAnswerIsFabricated(say)) {
+    blindCorrected = true;
+    say = BLIND_REFUSAL;
+  }
   if (!say) {
     return {
       ok: false,
@@ -156,7 +173,7 @@ export async function adviseOnce({ ctx, config, image, detection, notes, elapsed
       screen,
     };
   }
-  return { ok: true, screen, say };
+  return { ok: true, screen, say, blind: !hasImage, blindCorrected, visionError };
 }
 
 /**
@@ -380,12 +397,16 @@ export async function askQuestion({ ctx, config, image, imageType, question, his
 
     let screen = '';
     if (image && image.length > 0) {
-      const vision = await describeImage({ ctx, llmService, config, image, detection });
+      const vision = await describeImage({ ctx, llmService, config, image, detection, selection: target });
       if (vision.ok) screen = vision.text;
       else errors.push(`识图失败：${vision.message ?? '未知'}`);
     }
 
-    const prompt = buildAskPrompt({ question: asked, history, detection, screen });
+    // ⚠️ 没有画面依据时（本来没图 / 识图失败）必须显式告诉模型"看不到"：
+    // 以前 buildAskPrompt 在 screen 为空时什么都不加，模型就顺着窗口标题编画面
+    // （work 侧端到端复现：问"画面里这个怪是什么"，它答"你把截图发过来"——没说错但也没按话术）。
+    const basePrompt = buildAskPrompt({ question: asked, history, detection, screen });
+    const prompt = screen ? basePrompt : `${basePrompt}\n\n${BLIND_TAIL_NOTE}`;
     // preferSelected：玩家明确选了云端档位，就让选中的模型先出话（本地 9B 只做兜底）
     const text = await callText({
       ctx,
@@ -398,14 +419,20 @@ export async function askQuestion({ ctx, config, image, imageType, question, his
     });
     if (!text.ok) return { ok: false, reason: text.reason, message: text.message };
 
-    const answer = sanitizeSay(text.text);
+    let answer = sanitizeSay(text.text);
     if (!answer) return { ok: false, reason: 'empty-response', message: '模型没给出可用回答', screen };
+    // 输出后兜底：没图却开始描述画面 = 脑补，换回标准台词
+    let blindCorrected = false;
+    if (!screen && blindAnswerIsFabricated(answer)) {
+      blindCorrected = true;
+      answer = BLIND_REFUSAL;
+    }
     if (text.via?.startsWith('custom:')) {
       // 走到这儿说明选中的云端模型失败了，是本地 9B 救的场：标成 local-fallback，
       // 免得日志里看到"云端成功"却其实是本地答的。
-      return { ok: true, answer, screen, mode: 'local-fallback', via: text.via };
+      return { ok: true, answer, screen, mode: 'local-fallback', via: text.via, blindCorrected };
     }
-    return { ok: true, answer, screen, mode: 'twostep', via: text.via };
+    return { ok: true, answer, screen, mode: 'twostep', via: text.via, blindCorrected };
   }
 }
 
@@ -441,9 +468,9 @@ function buildAskPrompt({ question, history, detection, screen }) {
 }
 
 /** 第 1 步：把截图交给"能看图的模型"，要一段文字。 */
-async function describeImage({ ctx, llmService, config, image, detection }) {
+async function describeImage({ ctx, llmService, config, image, detection, selection, prompt: customPrompt }) {
   const errors = [];
-  const prompt = `${VISION_PROMPT}\n\n（正在玩的游戏：${detection?.title || detection?.process || '未知'}）`;
+  const prompt = customPrompt || `${VISION_PROMPT}\n\n（正在玩的游戏：${detection?.title || detection?.process || '未知'}）`;
 
   // ① 用户自己填的视觉模型 API（填了就它优先——这是"注册表里没有可用识图模型"时的正解）。
   //    这条**不需要 DSH 附件服务**：直接把图 base64 进请求体，
@@ -464,7 +491,30 @@ async function describeImage({ ctx, llmService, config, image, detection }) {
     }
   }
 
-  // ② 注册表里探测出来的候选（这条**需要**附件服务：DSH 的 image block 只认附件引用）
+  // ② 「截图直接交给主模型看」——按键那条早就支持，自动发言以前**完全没有这一档**：
+  //    结果模型明明能吃图，只要注册表没声明 supportsImages，自动发言就直接报
+  //    "看不到图片"，而按键用同一个模型却能正常看（work 侧实测，用户报的"不是一条路线"）。
+  //    这条不需要注册表声明：只要求附件服务可用 + 模型本身能收图。
+  if (config.askOneShot && selection?.provider && selection?.model) {
+    const one = await describeWithMainModel({ ctx, llmService, config, image, selection, prompt });
+    if (one.ok) {
+      const text = sanitizeScreen(one.text);
+      if (text) {
+        return {
+          ok: true,
+          text,
+          provider: selection.provider,
+          model: selection.model,
+          oneshot: true,
+        };
+      }
+      errors.push('主模型一步式: 输出不可用');
+    } else {
+      errors.push(`主模型一步式: ${one.message}`);
+    }
+  }
+
+  // ③ 注册表里探测出来的候选（这条**需要**附件服务：DSH 的 image block 只认附件引用）
   const attachment = await attachImage(ctx, image);
   const candidates = await visionCandidates(llmService, config);
   if (candidates.length === 0 || !attachment) {
@@ -700,9 +750,45 @@ export async function inspectVision({ ctx, config }) {
   };
 }
 
+/**
+ * 一步式识图：把截图**直接**交给当前会话模型，让它也读图。
+ *
+ * 为什么需要它：自动发言原来只会"找注册表里声明支持图片的模型"，
+ * 而注册表不声明 ≠ 模型不能吃图（很多自建端点就是不说）。按键那条路
+ * 早就有"直接把图喂给当前模型"的档，自动没有 → 同一个模型按键能看、自动说看不到。
+ * 这里补上，两条链路就一致了。
+ */
+async function describeWithMainModel({ ctx, llmService, config, image, selection, prompt }) {
+  const attachment = await attachImage(ctx, image);
+  if (!attachment) {
+    return { ok: false, message: 'DSH 附件服务不可用（图片块只能引用附件，不能塞裸 base64）' };
+  }
+  const result = await streamText({
+    llmService,
+    options: {
+      provider: selection.provider,
+      model: selection.model,
+      sessionId: CALL_IDENTITY,
+      messages: [
+        createUserMessage({
+          content: [
+            { type: 'image', attachment },
+            { type: 'text', text: prompt },
+          ],
+          source: { kind: 'plugin', plugin: 'dsh-game-copilot' },
+        }),
+      ],
+      system: '你是识图助手：只负责从截图里认出这是哪款游戏、并抽出现下的关键局势，不做画面描述。',
+      temperature: 1,
+      signal: AbortSignal.timeout(config.timeoutMs),
+    },
+  });
+  if (!result.ok) return { ok: false, message: result.message || result.reason || '请求失败' };
+  return { ok: true, text: result.text };
+}
+
 /** 跑一次流式生成，返回拼好的正文。 */
-async function streamText({ llmService, options }) {
-  const assembler = new BlockAssembler();
+async function streamText({ llmService, options }) {  const assembler = new BlockAssembler();
   try {
     for await (const chunk of llmService.stream(options)) {
       assembler.push(chunk);

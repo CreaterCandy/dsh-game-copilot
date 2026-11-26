@@ -87,6 +87,9 @@ textarea{min-height:58px;resize:vertical;line-height:1.5;}
 /* dsh（DSH 会话模型）模式下能力探针不适用：整块变淡、按钮不可点 */
 #probeArea.is-off .radios,#probeArea.is-off #btnProbe{opacity:.5;pointer-events:none;}
 .inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+/* 数字框/下拉 + 单位：一个语义单元整块换行，别让"秒""px"被甩到下一行断句 */
+.fld{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex:0 0 auto;}
+.fld .hint{margin:0;}
 .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;
   background:var(--dsw-alias-bg-secondary);color:var(--dsw-alias-text-secondary);}
 .pill--ok{background:var(--ok-bg);color:var(--ok);}
@@ -458,8 +461,20 @@ body.embed .wrap{gap:12px;}
             <option data-page-node-id="KRxMihV6SCm0vtOqgNHIAu" value="Yunxi">云希 · 男声 · Edge</option>
             <option data-page-node-id="fcAHvDPHkYEPBgLxF6plQ9" value="Huihui">慧慧 · 女声 · 系统</option>
           </select>
-          <input data-page-node-id="wEhyw3trWfrXATqiDDufty" type="text" value="1" id="inSpeed" inputmode="numeric" style="flex:0 0 66px"><span data-page-node-id="gyYi3cMb9CE4oXweofWGfa" class="hint">档位，1≈1.2 倍速</span>
           <button data-page-node-id="bJJ0qL3GnXUboZZIE0YNw8" class="btn btn--sm" id="btnTryVoice">试听</button>
+        </div>
+        <!-- 语速单独一行：倍速语义（1.0× = 原速），不让用户对着"档位 1"猜 -->
+        <div class="inline" style="margin-top:6px">
+          <span class="fld">
+            <span class="hint">语速</span>
+            <select id="selSpeed" style="flex:0 0 152px">
+              <option value="0.8">0.8× 慢一点</option>
+              <option value="1" selected>1.0× 正常</option>
+              <option value="1.2">1.2× 稍快</option>
+              <option value="1.5">1.5× 快</option>
+              <option value="2">2.0× 很快</option>
+            </select>
+          </span>
         </div>
         <p data-page-node-id="I9LYFcSTwzUrd4UXF9E1QR" class="hint" data-tip="Edge/系统语音用固定表；本地自然人声列本机探测到的离线音色" id="voiceHint">选完下一句生效</p>
       </div>
@@ -489,19 +504,27 @@ body.embed .wrap{gap:12px;}
       <div data-page-node-id="sDku8GOBiEXBIeEm2oBFQW" class="row__label">字号 / 宽度</div>
       <div data-page-node-id="o2CbBaB7QFp8GMEQplQ6BX" class="row__body">
         <div data-page-node-id="MWS8mBHhDUOJo1qjiSqiXv" class="inline">
-          <input data-page-node-id="a1dPPzI7Cxje6fQCfQy7Io" type="text" value="13" id="inFont" data-def="13" inputmode="numeric" style="flex:0 0 64px"><span data-page-node-id="D9E1lqGNX9Vezn5b7VkNzs" class="hint">px</span>
-          <input data-page-node-id="2kHerR4fkWJkBHhbdDD5LN" type="text" value="300" id="inWidth" data-def="300" inputmode="numeric" style="flex:0 0 76px"><span data-page-node-id="7yfxQn6fu8kopj97LIu92w" class="hint">px 最大宽度</span>
+          <span class="fld">
+            <span class="hint">字号</span>
+            <input data-page-node-id="a1dPPzI7Cxje6fQCfQy7Io" type="text" value="13" id="inFont" data-def="13" inputmode="numeric" style="flex:0 0 64px"><span data-page-node-id="D9E1lqGNX9Vezn5b7VkNzs" class="hint">px</span>
+          </span>
+          <span class="fld">
+            <span class="hint">最大宽度</span>
+            <input data-page-node-id="2kHerR4fkWJkBHhbdDD5LN" type="text" value="300" id="inWidth" data-def="300" inputmode="numeric" style="flex:0 0 76px"><span data-page-node-id="7yfxQn6fu8kopj97LIu92w" class="hint">px</span>
+          </span>
           <button data-page-node-id="HJqVJ1a1e2Q8AIKJ2wiOyC" class="btn btn--sm js-def" data-for="inFont,inWidth">恢复默认</button>
         </div>
-        <p data-page-node-id="q0mGTVprMCJBG5w11yh7zn" class="hint" data-tip="小窗里仍受窗口宽度约束">范围 11–20 / 160–640</p>
+        <p data-page-node-id="q0mGTVprMCJBG5w11yh7zn" class="hint" data-tip="小窗里仍受窗口宽度约束">字号 11–20，宽度 160–640</p>
       </div>
     </div>
     <div data-page-node-id="t0mO3O3LBLP0f26HCPxn00" class="row">
       <div data-page-node-id="ja7E0i3EVy3Xb1BkcaesCh" class="row__label">小窗尺寸</div>
       <div data-page-node-id="SPzuIgeNrkfK2F2q5f1tJ7" class="row__body">
         <div data-page-node-id="i6SyZahXjPqdjbyuoXXEGd" class="inline">
-          <input data-page-node-id="d3qwEevRj4sKY62fMxfzGs" type="text" value="340" id="inWinW" data-def="340" inputmode="numeric" style="flex:0 0 72px"><span data-page-node-id="FzFn2kWwUuFcKcuffNkckC" class="hint">×</span>
-          <input data-page-node-id="neJdbVxikKy45wUGGA0jSR" type="text" value="360" id="inWinH" data-def="360" inputmode="numeric" style="flex:0 0 72px"><span data-page-node-id="lgPf1tCgFAG4wv7sDpEhDV" class="hint">逻辑像素</span>
+          <span class="fld">
+            <input data-page-node-id="d3qwEevRj4sKY62fMxfzGs" type="text" value="340" id="inWinW" data-def="340" inputmode="numeric" style="flex:0 0 72px"><span data-page-node-id="FzFn2kWwUuFcKcuffNkckC" class="hint">×</span>
+            <input data-page-node-id="neJdbVxikKy45wUGGA0jSR" type="text" value="360" id="inWinH" data-def="360" inputmode="numeric" style="flex:0 0 72px"><span data-page-node-id="lgPf1tCgFAG4wv7sDpEhDV" class="hint">逻辑像素</span>
+          </span>
           <button data-page-node-id="6Xq9G5hvTgICieDIaaKm0l" class="btn btn--sm js-def" data-for="inWinW,inWinH">恢复默认</button>
         </div>
         <p data-page-node-id="d76bCHiVCAZOIZ5RyKTqym" class="hint" data-tip="超过当前屏幕工作区时会自动压到屏内，见下方「小窗位置」">改完重启小窗</p>
@@ -565,11 +588,23 @@ body.embed .wrap{gap:12px;}
         </div>
         <div data-page-node-id="xxN3YOZUVEZZhQgmLb56JQ" class="row">
           <div data-page-node-id="tzoQ61GQHQyCIRUDi93UkN" class="row__label">节奏</div>
-          <div data-page-node-id="5b5yfFfEjllbXYiBI0x0I5" class="row__body"><div data-page-node-id="OxdhaYD1KG9C0DnDQThkwH" class="inline"><input data-page-node-id="0Q4HpgHuXTzEZkB2aRx7hO" type="text" id="inInterval" value="45" style="flex:0 0 70px"><span data-page-node-id="x1h6lGi9AKlH2hlMYgjiBB" class="hint">秒说一句</span><input data-page-node-id="nCogWPB148HpDRTjSLDBwb" type="text" id="inWarmup" value="15" style="flex:0 0 70px"><span data-page-node-id="zEkJ7GFrUXydkhPEnsCy9s" class="hint">秒后才开口（刚开游戏不插嘴）</span></div></div>
+          <div data-page-node-id="5b5yfFfEjllbXYiBI0x0I5" class="row__body">
+            <div data-page-node-id="OxdhaYD1KG9C0DnDQThkwH" class="inline">
+              <span class="fld">
+                <span class="hint">间隔</span>
+                <input data-page-node-id="0Q4HpgHuXTzEZkB2aRx7hO" type="text" id="inInterval" value="45" inputmode="numeric" style="flex:0 0 64px"><span class="hint">秒冒一句</span>
+              </span>
+              <span class="fld">
+                <span class="hint">开局后先安静</span>
+                <input data-page-node-id="nCogWPB148HpDRTjSLDBwb" type="text" id="inWarmup" value="15" inputmode="numeric" style="flex:0 0 64px"><span class="hint">秒</span>
+              </span>
+            </div>
+            <p class="hint" data-tip="刚开游戏那几秒还不知道你在干什么，先别插嘴">第一项 = 多久冒一句；第二项 = 进游戏后先安静多久</p>
+          </div>
         </div>
         <div data-page-node-id="EgDyBxUjeSZQsyfi7GJlPK" class="row">
           <div data-page-node-id="TIN1IJYrpijd0UxhoAx4DD" class="row__label">哪些游戏算</div>
-          <div data-page-node-id="rokeTU3UvoQwYjJ693W7CX" class="row__body"><input data-page-node-id="GayQTxFSeegRarNy3lhQ5x" type="text" id="inGames" placeholder="进程名或窗口标题关键字，逗号分隔；留空 = 任何前台窗口都算"><p data-page-node-id="pi4V0rTmzAmur6QZh7cmx5" class="hint">空着连看视频也会跟你唠，慎用。</p></div>
+          <div data-page-node-id="rokeTU3UvoQwYjJ693W7CX" class="row__body"><input data-page-node-id="GayQTxFSeegRarNy3lhQ5x" type="text" id="inGames" placeholder="进程名或窗口标题关键字，逗号分隔（如 factorio, 幸福工厂）"><p data-page-node-id="pi4V0rTmzAmur6QZh7cmx5" class="hint">留空 = 不自动开口（以前是"什么窗口都算"，会在 Word/浏览器里也截屏）</p><label class="sw" style="font-size:12px;margin-top:4px"><input type="checkbox" id="cbAnyWin"> 任何窗口都算（连看视频也会跟你唠）</label></div>
         </div>
         <div data-page-node-id="yjmu4gk6nHkTByvyO0HJtX" class="row">
           <div data-page-node-id="XE6wGudIAzl2vtZlo2eRdn" class="row__label">用哪个模型</div>
@@ -1003,7 +1038,7 @@ body.embed .wrap{gap:12px;}
   var cbTts = document.getElementById('cbTts');
   var selEngine = document.getElementById('selTtsEngine');
   var selVoice = document.getElementById('selVoice');
-  var inSpeed = document.getElementById('inSpeed');
+  var selSpeed = document.getElementById('selSpeed');
   var btnTryVoice = document.getElementById('btnTryVoice');
   var probeHint = document.getElementById('ttsProbe');
   var voiceHint = document.getElementById('voiceHint');
@@ -1055,8 +1090,11 @@ body.embed .wrap{gap:12px;}
     var off = !cbTts.checked;
     selEngine.disabled = off;
     selVoice.disabled = off;
-    inSpeed.disabled = off;
-    btnTryVoice.disabled = off;
+    if (selSpeed) selSpeed.disabled = off;
+    // take('btnTryVoice') 会把按钮整体换成新节点，这里必须重新查，
+    // 否则禁用/恢复作用在已脱离文档的旧节点上（表现为"关掉出声后试听按钮还能点"）。
+    var tryBtn = document.getElementById('btnTryVoice');
+    if (tryBtn) tryBtn.disabled = off;
   }
   cbTts.addEventListener('change', syncVoice);
   selEngine.addEventListener('change', syncVoice);
@@ -1244,6 +1282,34 @@ body.embed .wrap{gap:12px;}
       return el ? el.value : fallback;
     }
 
+    // 语速在界面上是倍速（1.0× = 原速），配置里却是两套单位：
+    //   tts.speed    = SAPI 整数 -10..10（0 原速，1 ≈ 1.20×）
+    //   tts.edgeRate = Edge 在线百分比（"+20%"）
+    // 只写一套会出现"换个引擎语速就跳"，所以两边一起写，读的时候优先认 edgeRate（粒度细）。
+    function rateOf(tts) {
+      var er = tts && typeof tts.edgeRate === 'string' ? tts.edgeRate.trim() : '';
+      var m = /^([+-]?\d+)\s*%$/.exec(er);
+      if (m) return 1 + Number(m[1]) / 100;
+      var sp = Number(tts && tts.speed);
+      return 1 + (isFinite(sp) ? sp : 0) * 0.2;
+    }
+    function paintSpeed(tts) {
+      if (!selSpeed) return;
+      var want = rateOf(tts);
+      var best = '1';
+      var diff = Infinity;
+      for (var i = 0; i < selSpeed.options.length; i++) {
+        var d = Math.abs(Number(selSpeed.options[i].value) - want);
+        if (d < diff) { diff = d; best = selSpeed.options[i].value; }
+      }
+      selSpeed.value = best;
+    }
+    function rateToTts(rate) {
+      var r = Number(rate) || 1;
+      var pct = Math.round((r - 1) * 100);
+      return { speed: Math.round((r - 1) / 0.2), edgeRate: (pct >= 0 ? '+' : '') + pct + '%' };
+    }
+
     function fill(c) {
       current = c;
       srcSel.value = c.askBackend || 'http';
@@ -1265,6 +1331,8 @@ body.embed .wrap{gap:12px;}
       if (elInterval) elInterval.value = c.intervalSec != null ? c.intervalSec : 45;
       if (elWarmup) elWarmup.value = c.warmupMs != null ? Math.round(Number(c.warmupMs) / 1000) : 15;
       if (elGames) elGames.value = Array.isArray(c.games) ? c.games.join('，') : '';
+      var elAnyWin = document.getElementById('cbAnyWin');
+      if (elAnyWin) elAnyWin.checked = c.autoAnyWindow === true;
       // 记忆条数 / 独立识图端：同样是"界面上有、背后没接"的两块
       var elMem = document.getElementById('selMemory');
       if (elMem) { var mem = c.memoryLimit != null ? Number(c.memoryLimit) : 3; elMem.value = String(mem); }
@@ -1281,7 +1349,7 @@ body.embed .wrap{gap:12px;}
       cbTts.checked = !!(c.tts && c.tts.enabled);
       selTtsEngine.value = (c.tts && c.tts.backend) || 'auto';
       pendingVoice = (c.tts && c.tts.voice) || '';
-      inSpeed.value = (c.tts && c.tts.speed) != null ? c.tts.speed : 1;
+      paintSpeed(c.tts);
       selBubble.value = c.bubbleStyle || 'classic';
       inFont.value = c.bubbleFontSize || 13;
       inWidth.value = c.bubbleMaxWidth || 300;
@@ -1325,6 +1393,7 @@ body.embed .wrap{gap:12px;}
         intervalSec: Number(val('inInterval', 45)) || 45,
         warmupMs: (Number(val('inWarmup', 15)) || 15) * 1000,
         games: String(val('inGames', '')).split(/[,，、\s]+/).map(function (x) { return x.trim(); }).filter(Boolean),
+        autoAnyWindow: !!(document.getElementById('cbAnyWin') || {}).checked,
         memoryLimit: Number(val('selMemory', 3)),
         visionApi: {
           enabled: !!(document.getElementById('cbVision') || {}).checked,
@@ -1336,12 +1405,16 @@ body.embed .wrap{gap:12px;}
         askOneShot: (function () { var el = document.getElementById('cbOneShot'); return el ? el.checked : true; })(),
         enabled: !!(cbAuto && cbAuto.checked),
         askEnabled: cbPtt.checked,
-        tts: {
-          enabled: cbTts.checked,
-          backend: val('selTtsEngine', 'auto'),
-          voice: val('selVoice', ''),
-          speed: Number(val('inSpeed', 1)),
-        },
+        tts: (function () {
+          var r = rateToTts(val('selSpeed', '1'));
+          return {
+            enabled: cbTts.checked,
+            backend: val('selTtsEngine', 'auto'),
+            voice: val('selVoice', ''),
+            speed: r.speed,
+            edgeRate: r.edgeRate,
+          };
+        })(),
         bubbleStyle: val('selBubble', 'classic'),
         bubbleFontSize: Number(val('inFont', 13)),
         bubbleMaxWidth: Number(val('inWidth', 300)),
@@ -1463,17 +1536,48 @@ body.embed .wrap{gap:12px;}
 
     // 自动开口开关直接落 enabled（后端自动循环的总闸），下次启动会一起起播报桥
     if (cbAuto) cbAuto.addEventListener('change', function () {
-      post('/config', { enabled: cbAuto.checked })
+      var want = cbAuto.checked;
+      cbAuto.disabled = true;
+      state(want ? '正在开启…' : '正在关闭…');
+      post('/config', { enabled: want })
         .then(function (r) {
-          state(r.ok ? '自动开口已' + (cbAuto.checked ? '开启' : '关闭') : '保存失败', !!r.ok);
+          // 不只看 ok：拿后端回显的 config.enabled 对一遍才算"真的关了"。
+          // 这条开关以前是 fire-and-forget，请求没到插件也没人知道
+          // （用户以为关了，其实还在每 45 秒截屏调模型 —— work 侧实测）。
+          var applied = !!(r && r.ok && r.config && r.config.enabled === want);
+          if (!applied) cbAuto.checked = !want;
+          state(
+            applied
+              ? '自动开口已' + (want ? '开启' : '关闭')
+              : '没生效：' + ((r && r.message) || '插件没回执，可能没在运行'),
+            applied,
+          );
           return refreshRuntime();
         })
-        .catch(function (e) { state(e.message, false); });
+        .catch(function (e) {
+          cbAuto.checked = !want;
+          state('没生效：' + (e && e.message ? e.message : '连不上插件'), false);
+        })
+        .then(function () { cbAuto.disabled = false; });
     });
 
     take('btnTryVoice').addEventListener('click', function () {
       var btn = this;
+      var label = btn.textContent;
       btn.textContent = '试听中…';
+      // 失败必须把后端原话亮出来：宿主已经把「python 退出码 + stderr 末 4 行」
+      // 拼进 message 了，前端只看 r.ok 的话用户永远只看到"试听失败"三个字。
+      var fail = function (msg) {
+        var text = String(msg || '后端没返回原因').replace(/\s+/g, ' ').trim();
+        btn.textContent = '试听失败';
+        if (voiceHint) {
+          var prefix = /^试听/.test(text) ? '' : '试听失败：';
+          voiceHint.textContent = prefix + (text.length > 160 ? text.slice(0, 160) + '…' : text);
+          voiceHint.style.color = 'var(--warn)';
+          voiceHint.title = text;
+        }
+        setTimeout(function () { btn.textContent = label; }, 1800);
+      };
       // 顶层也带一份音色/引擎：兼容尚未重启的旧版宿主（它只读 body 顶层）。
       var draft = collect().tts;
       post('/tts/preview', {
@@ -1482,10 +1586,23 @@ body.embed .wrap{gap:12px;}
         backend: draft.backend,
         voice: draft.voice,
         speed: draft.speed,
+        edgeRate: draft.edgeRate,
         volume: draft.volume,
       })
-        .then(function (r) { btn.textContent = r.ok ? '试听完成' : '试听失败'; setTimeout(function () { btn.textContent = '试听一句'; }, 1500); })
-        .catch(function () { btn.textContent = '试听失败'; });
+        .then(function (r) {
+          if (r && r.ok) {
+            btn.textContent = '试听完成';
+            if (voiceHint) {
+              voiceHint.textContent = '选完下一句生效';
+              voiceHint.style.color = '';
+              voiceHint.title = '';
+            }
+            setTimeout(function () { btn.textContent = label; }, 1500);
+          } else {
+            fail(r && r.message);
+          }
+        })
+        .catch(function (e) { fail(e && e.message); });
     });
 
     var clearKey = document.getElementById('btnKeyClear');

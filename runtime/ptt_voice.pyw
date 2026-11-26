@@ -192,6 +192,9 @@ def apply_plugin_tts(router) -> dict:
             backend=p.get("backend") or None,
             voice=p.get("voice") or None,
             speed=p.get("speed"),
+            # Edge 在线后端吃的是百分比（+20%），和 SAPI 的整数档是两套；
+            # 不传这个，设置页改语速对默认的 Edge 音色完全无效。
+            edge_rate=p.get("edgeRate"),
             volume=p.get("volume"),
         )
     except Exception as e:  # 设置写错不该让整轮问答失败

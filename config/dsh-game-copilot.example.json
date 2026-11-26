@@ -1,4 +1,4 @@
-{
+﻿{
   "_说明": "默认配置。setup.ps1 会在 %DSH_HOME%\\dsh-game-copilot.json 不存在时复制过去；已经存在就不动。设置页改的也是这一份。",
   "enabled": false,
   "askEnabled": true,
@@ -35,7 +35,8 @@
     "enabled": true,
     "backend": "auto",
     "voice": "",
-    "speed": 1,
+    "speed": 0,
+    "edgeRate": "+0%",
     "volume": 100,
     "streaming": true,
     "maxChars": 60

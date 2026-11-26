@@ -10,8 +10,11 @@ export const DEFAULTS = {
    *  手动问答（按住说话 / 打字 / 剪贴板）走的是 /ask，不看这个开关。 */
   enabled: false,
   /** 游戏白名单：进程名（可带/不带 .exe，大小写不敏感）或窗口标题关键字。
-   *  空数组 = 任何前台窗口都算（连看视频也会跟你唠，慎用）。 */
+   *  **空数组 = 不自动开口**（旧版是"任何前台窗口都算"，等于在 Office/浏览器里
+   *  每 45 秒截屏识图——work 侧实测就是这么被误伤的）。 */
   games: [],
+  /** 空白名单也照样自动开口（= 任何前台窗口都算）。默认关，要的人自己勾。 */
+  autoAnyWindow: false,
   /** 全屏游戏才发言？false = 窗口化 / 无边框也算 */
   requireFullscreen: false,
   /** 前台窗口最小化的（比如切回桌面）不算在玩游戏 */
@@ -155,7 +158,9 @@ export const DEFAULTS = {
     /** 音色（SAPI token，如 Xiaoyi / 云希）。留空 = 沿用 tts/config.json 里的 */
     voice: '',
     /** 语速：SAPI 整数 -10..10，0 原速，1 ≈ 1.20x（实测） */
-    speed: 1,
+    speed: 0,
+    /** Edge 在线语速百分比（字符串）。和 speed 是两套单位，设置页改倍速时一起写 */
+    edgeRate: '+0%',
     /** 音量 0..100（SAPI 会烘进波形，winsound 播出来也生效） */
     volume: 100,
     /** 分句流式：第一句合成完就开口（关掉 = 整句合成后一次播） */
@@ -267,6 +272,7 @@ export function normalizeConfig(raw) {
   config.games = Array.isArray(source.games)
     ? source.games.filter((item) => typeof item === 'string' && item.trim() !== '').map((item) => item.trim())
     : DEFAULTS.games;
+  config.autoAnyWindow = boolean(source.autoAnyWindow, DEFAULTS.autoAnyWindow);
 
   config.checkIntervalMs = clampNumber(source.checkIntervalMs, DEFAULTS.checkIntervalMs, 1000, 120000);
   config.intervalSec = clampNumber(source.intervalSec, DEFAULTS.intervalSec, 5, 3600);
@@ -361,10 +367,22 @@ function normalizeTts(raw, fallback) {
     backend: Object.prototype.hasOwnProperty.call(TTS_BACKEND_PRESETS, backend) ? backend : fallback.backend,
     voice: typeof source.voice === 'string' ? source.voice.trim() : fallback.voice,
     speed: clampNumber(source.speed, fallback.speed, -10, 10),
+    // Edge 在线后端吃的是百分比字符串（"+20%"/"-20%"），和 speed 的整数档是两套单位。
+    // 设置页的倍速下拉会同时写这两个，这里只做格式校验：认不出就用默认 +0%。
+    edgeRate: normalizeEdgeRate(source.edgeRate, fallback.edgeRate),
     volume: clampNumber(source.volume, fallback.volume, 0, 100),
     streaming: boolean(source.streaming, fallback.streaming),
     maxChars: clampNumber(source.maxChars, fallback.maxChars, 10, 200),
   };
+}
+
+/** Edge 语速：只接受 -100%..100% 的百分比写法（"+20%" / "20" / 20 都认）。 */
+function normalizeEdgeRate(raw, fallback) {
+  const text = typeof raw === 'number' ? String(raw) : typeof raw === 'string' ? raw.trim() : '';
+  const match = /^([+-]?\d{1,3})\s*%?$/.exec(text);
+  if (!match) return fallback;
+  const value = Math.max(-100, Math.min(100, Number(match[1])));
+  return `${value >= 0 ? '+' : ''}${value}%`;
 }
 
 /**

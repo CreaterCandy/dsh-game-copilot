@@ -662,6 +662,7 @@ class TTSRouter:
         voice: Optional[str] = None,
         speed=None,
         volume=None,
+        edge_rate=None,
     ) -> bool:
         """把设置页改的值套进内存（**免重启**），返回"是否真的变了"。
 
@@ -673,6 +674,10 @@ class TTSRouter:
         voice 写 SAPI token 名（Xiaoyi / 晓伊 / Yunxi…），edge 那边的完整名
         （zh-CN-XiaoyiNeural）由这里按同一张表推出来——两边永远指同一个人，
         不会出现"主音色晓伊、降级后变云希"的错位。
+
+        edge_rate 是 Edge 在线后端单独的百分比语速（"+20%" / "-20%"）。
+        以前只给 SAPI 系（speed 整数）开了口子，结果设置页改语速对默认的
+        Edge 音色**完全无效**——UI 上调了没反应。现在两个一起传。
         """
         changed = False
 
@@ -686,6 +691,16 @@ class TTSRouter:
             if value != self.speed:
                 self.speed = value
                 self.config["speed"] = value
+                changed = True
+
+        if edge_rate is not None:
+            raw = _norm_rate(
+                edge_rate,
+                self.config.get("backends", {}).get("edge_tts", {}).get("rate", "+0%"),
+            )
+            current = self.config.get("backends", {}).get("edge_tts", {}).get("rate", "+0%")
+            if raw != current:
+                self.config.setdefault("backends", {}).setdefault("edge_tts", {})["rate"] = raw
                 changed = True
 
         if volume is not None:
@@ -1058,15 +1073,29 @@ def _cli(argv: List[str]) -> int:
         "--volume", type=int, default=None, help="临时改音量（0..100，100 原音量）"
     )
     parser.add_argument(
+        "--edge-rate",
+        default=None,
+        help='临时改 Edge 在线语速（百分比，如 "+20%" / "-20%"；只对 edge_tts 生效）',
+    )
+    parser.add_argument(
         "--voice", default=None, help="临时改音色（SAPI token，如 Xiaoyi / 云希）"
     )
     args = parser.parse_args(argv)
 
     router = get_tts()
-    if args.speed is not None or args.volume is not None or args.voice:
-        router.apply_runtime(voice=args.voice, speed=args.speed, volume=args.volume)
+    if (
+        args.speed is not None
+        or args.volume is not None
+        or args.voice
+        or args.edge_rate is not None
+    ):
+        router.apply_runtime(
+            voice=args.voice, speed=args.speed, volume=args.volume, edge_rate=args.edge_rate
+        )
         print(
-            f"[本次设置] 语速 {router.speed} / 音量 {router.volume} / "
+            f"[本次设置] 语速 {router.speed}"
+            f"（Edge {router.config.get('backends', {}).get('edge_tts', {}).get('rate', '+0%')}）"
+            f" / 音量 {router.volume} / "
             f"音色 {router.get_backend('offline_xiaoxiao').voice_hint}"
             "（只影响这一次，不写配置文件）"
         )

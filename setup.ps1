@@ -98,9 +98,23 @@ $candidates = @()
 # py 启动器能精确点名版本，优先用它挑
 $pyLauncher = Get-Command py -ErrorAction SilentlyContinue
 if ($pyLauncher) {
-    foreach ($v in @('3.14', '3.13', '3.12')) {
-        $out = & $pyLauncher.Source "-$v" -c "import sys; print(sys.executable)" 2>$null
-        if ($LASTEXITCODE -eq 0 -and $out) { $candidates += ([string]$out).Trim() }
+    # ⚠️ 探测必须在宽松的错误策略下跑：py 启动器不认识目标版本时（uv / conda / 自定义安装很常见），
+    # 原生命令写 stderr 在本脚本开头的 $ErrorActionPreference='Stop' 下会变成**终止性**
+    # NativeCommandError，整个安装脚本第一步就 EXIT=1 —— 即使 PATH 里已经有一个合格的 3.12。
+    # 这里临时降级成 Continue，探测完立刻恢复，别让"探测失败"等于"安装失败"。
+    $probeEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        foreach ($v in @('3.14', '3.13', '3.12')) {
+            try {
+                $out = & $pyLauncher.Source "-$v" -c "import sys; print(sys.executable)" 2>$null
+                if ($LASTEXITCODE -eq 0 -and $out) { $candidates += ([string]$out).Trim() }
+            } catch {
+                Write-Host "  py -$v 探测失败，跳过" -ForegroundColor DarkGray
+            }
+        }
+    } finally {
+        $ErrorActionPreference = $probeEap
     }
 }
 foreach ($n in @('python', 'python3')) {
@@ -111,7 +125,9 @@ $candidates = $candidates | Where-Object { $_ } | Select-Object -Unique
 
 foreach ($cand in $candidates) {
     if (-not (Test-Path -LiteralPath $cand)) { continue }
-    $v = & $cand -c "import sys; print('%d.%d.%d' % sys.version_info[:3])" 2>$null
+    $v = $null
+    # 同上：坏掉/不兼容的解释器写 stderr 会在 Stop 策略下抛终止性错误，不能让它带走整个脚本
+    try { $v = & $cand -c "import sys; print('%d.%d.%d' % sys.version_info[:3])" 2>$null } catch { continue }
     if ($LASTEXITCODE -ne 0 -or -not $v) { continue }
     $v = ([string]$v).Trim()
     try { $parsed = [version]$v } catch { continue }
@@ -126,7 +142,13 @@ foreach ($cand in $candidates) {
 
 if (-not $pyExe) {
     $pathPy = Get-Command python -ErrorAction SilentlyContinue
-    $have = if ($pathPy) { (& $pathPy.Source --version 2>&1) -join ' ' } else { 'PATH 里没有 python' }
+    # 同样在宽松策略下取版本号：`2>&1` 会把原生命令的 stderr 变成 ErrorRecord，Stop 下直接抛
+    $have = 'PATH 里没有 python'
+    if ($pathPy) {
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try { $have = (& $pathPy.Source --version 2>&1) -join ' ' } catch { $have = 'python 版本探测失败' } finally { $ErrorActionPreference = $prevEap }
+    }
     throw @"
 需要 Python 3.12 或更高版本。当前：$have
 
